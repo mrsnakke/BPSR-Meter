@@ -55,8 +55,7 @@ Para que el medidor funcione, necesitas instalar lo siguiente:
 ### Video Tutorial
 Para una guía visual sobre cómo instalar y configurar el medidor, puedes ver el siguiente video:
 
-[![Video Tutorial de YouTube] https://youtu.be/dCBPiaj0w8c
-> **Nota:** ¡Guía en video próximamente!.
+[![Video Tutorial de YouTube](https://img.youtube.com/vi/dCBPiaj0w8c/maxresdefault.jpg)](https://youtu.be/dCBPiaj0w8c)
 
 ### Método 1: Uso Local (Navegador o OBS en la misma PC)
 Ideal si juegas y transmites desde la misma computadora.
@@ -167,8 +166,7 @@ For the meter to work, you need to install the following:
 ### Video Tutorial
 For a visual guide on how to install and set up the meter, you can watch the following video:
 
-[![YouTube Video Tutorial](https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
-> **Note:** Video guide coming soon!.
+[![Video Tutorial de YouTube](https://img.youtube.com/vi/dCBPiaj0w8c/maxresdefault.jpg)](https://youtu.be/dCBPiaj0w8c)
 
 ### Method 1: Local Use (Browser or OBS on the same PC)
 Ideal if you play and stream from the same computer.
