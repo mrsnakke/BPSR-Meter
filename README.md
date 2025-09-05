@@ -114,11 +114,11 @@ Si usas una PC para jugar y otra para transmitir.
 
 ---
 ---
+
+# DPS METER (English Version)
 <div align="center">
   <img src="portada.png" alt="Portada" width="800"/>
 </div>
-
-# DPS METER (English Version)
 
 A DPS (Damage Per Second) meter designed for **Blue Protocol: Star Resonance**, ideal for players and streamers who want to analyze and display their performance in real-time.
 
