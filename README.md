@@ -138,7 +138,7 @@ This meter operates by capturing and analyzing the game's network traffic in rea
 9.  **MAX ⚔ (Maximum DPS):** Your highest damage per second peak.
 10. **GS (Gear Score):** Score of your equipment and abilities.
 11. **🔥 (Total Damage):** Total damage accumulated in the encounter.
-12. **⛨ (Total Healing):** Total healing accumulated in the encounter.
+12. ** _ (Total Healing):** Total healing accumulated in the encounter.
 
 ---
 
