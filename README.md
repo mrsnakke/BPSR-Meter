@@ -55,7 +55,7 @@ Para que el medidor funcione, necesitas instalar lo siguiente:
 ### Video Tutorial
 Para una guía visual sobre cómo instalar y configurar el medidor, puedes ver el siguiente video:
 
-[![Video Tutorial de YouTube]([https://www.youtube.com/watch?v=dQw4w9WgXcQ](https://youtu.be/dCBPiaj0w8c))
+[![Video Tutorial de YouTube][(https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg)]]
 > **Nota:** ¡Guía en video próximamente!.
 
 ### Método 1: Uso Local (Navegador o OBS en la misma PC)
