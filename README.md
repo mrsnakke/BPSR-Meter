@@ -2,7 +2,7 @@
 
 # DPS METER
 
-[English Version](#dps-meter-by-mrsnake-english-version)
+[English Version](#dps-meter-english-version)
 
 Este es un medidor de DPS (Daño Por Segundo) diseñado para Blue Protocol: Star Resonance, útil para streamers que desean mostrar esta información en sus transmisiones.
 
