@@ -1,6 +1,6 @@
 ![Portada](portada.png)
 
-# DPS METER by MrSnake
+# DPS METER
 
 [English Version](#dps-meter-by-mrsnake-english-version)
 
@@ -110,7 +110,7 @@ Sí, este medidor funciona en el servidor chino. Esto se debe a que los datos de
 
 ---
 
-# DPS METER by MrSnake (English Version)
+# DPS METER (English Version)
 
 This is a DPS (Damage Per Second) meter designed for Blue Protocol: Star Resonance, useful for streamers who want to display this information in their broadcasts.
 
