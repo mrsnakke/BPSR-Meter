@@ -114,6 +114,9 @@ Si usas una PC para jugar y otra para transmitir.
 
 ---
 ---
+<div align="center">
+  <img src="portada.png" alt="Portada" width="800"/>
+</div>
 
 # DPS METER (English Version)
 
