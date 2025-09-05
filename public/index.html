@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medidor DPS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: transparent;
+            --bar-bg: rgba(13, 17, 23, 0.8);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --font-main: 'Inter', sans-serif;
+            --shadow-soft: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --border-soft: 1px solid rgba(255, 255, 255, 0.1);
+            --text-shadow: 0 0 2px rgba(0, 0, 0, 0.7), 0 0 4px rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            background: transparent;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            margin: 0;
+            padding: 8px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Inputs y botones en la parte superior */
+        #guardar-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: var(--border-soft);
+            color: var(--text-primary);
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        #guardar-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        input[type="text"] {
+            background: rgba(0, 0, 0, 0.2);
+            border: var(--border-soft);
+            color: var(--text-primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+            font-size: 0.9rem;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .player-container > * {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        :root {
+            --bg-color: rgba(28, 30, 44, 0.95);
+            --bar-bg-color: #1c1e2c;
+            --text-primary: #e0e0e0;
+            --text-secondary: #9ba3c7;
+            --font-main: 'Inter', sans-serif;
+            --gradient-primary: linear-gradient(90deg, rgba(219, 104, 121, 0.2), rgba(219, 104, 121, 0.8));
+            --gradient-secondary: linear-gradient(90deg, rgba(104, 142, 216, 0.2), rgba(104, 142, 216, 0.8));
+            --rank-default: linear-gradient(90deg, rgba(86, 95, 137, 0.2), rgba(86, 95, 137, 0.8));
+            --shadow-soft: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --glow-effect: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+        
+        .player-bar {
+            background: var(--bar-bg);
+            border: var(--border-soft);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            height: 60px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            position: absolute;
+            height: 100%;
+            width: 0%;
+            background: rgba(219, 104, 121, 0.2);
+            transition: width 0.3s ease-out;
+        }
+
+        .bar-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            padding: 4px 8px;
+            gap: 4px;
+        }
+
+        .name-col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Alinea los elementos al inicio */
+            padding-top: 4px; /* Pequeño padding superior para subir el nombre */
+            gap: 1px;
+            min-width: 120px;
+        }
+
+        .stats-col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 85px;
+            margin-right: -8px; /* Truco: margen negativo para acercar el icono */
+            position: relative; /* Para mantener el z-index */
+            z-index: 1; /* Asegura que las stats estén sobre otros elementos */
+        }
+
+        .icon-col {
+            display: flex;
+            align-items: center;
+            min-width: auto;
+            margin: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .extra-col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 110px;
+            margin-left: 2px;
+        }
+
+        .player-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px; /* Ajustado para subir el nombre */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-gear-score {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            margin-top: 1px;
+        }
+
+        .player-id {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .stats-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 16px;
+            white-space: nowrap;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            width: 28px;
+            text-align: left;
+            margin-left: 1px;
+        }
+
+        .stat-value {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            min-width: 40px;
+            text-align: right;
+            padding-right: 2px;
+        }
+
+        .class-icon {
+            border: none;
+            object-fit: contain;
+            display: block;
+            margin: auto;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+        }
+
+        .stats-extra {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .stat-icon {
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            color: var(--text-secondary);
+        }
+
+        /* Ajustes de color del texto */
+        :root {
+            --text-primary: #fff;
+            --text-secondary: rgba(255, 255, 255, 0.8);
+        }
+
+        .stat-icon {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            padding-left: 4px; /* Desplazar iconos ligeramente a la derecha */
+        }
+
+        .stat-icon .icon {
+            display: inline-block;
+            width: 12px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        /* Nuevos estilos para la columna de estadísticas adicionales */
+        .additional-stats-col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 100px; /* Ajustar el ancho según sea necesario */
+            margin-left: 2px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1); /* Separador visual */
+            padding-left: 8px;
+        }
+
+        .additional-stats-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .additional-stat-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 16px;
+            white-space: nowrap;
+            position: relative; /* Para posicionar la barra de vida */
+        }
+
+        .additional-stat-icon {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            width: 16px;
+            text-align: center;
+            z-index: 2; /* Asegura que el icono esté sobre la barra */
+        }
+
+        .additional-stat-value {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            min-width: 40px;
+            text-align: right;
+            z-index: 2; /* Asegura que el texto esté sobre la barra */
+            position: relative;
+        }
+
+        .hp-bar-background {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background-color: rgba(17, 17, 17, 0.699); /* Fondo de la barra */
+            border-radius: 6px;
+            width: 130%;
+            z-index: 1; /* Detrás del texto y el icono */
+            overflow: hidden;
+        }
+
+        .hp-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 6px;
+            transition: width 0.3s ease-out, background-color 0.3s ease-out;
+        }
+
+        .stat-icon span {
+            min-width: 1.2em;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .class-icon {
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            margin: 0;
+            background: none;
+            border: none;
+            box-shadow: none;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+            transform: scale(1.2);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        .dps-meter { width: 650px; background-color: transparent; padding: 4px 8px; } /* Aumentado el ancho para acomodar la nueva columna */
+        .controls { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; align-items: center; }
+        #diccionario-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 0 auto;
+        }
+        #diccionario-form input, #diccionario-form button {
+            height: 32px;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0,0,0,0.3);
+            color: var(--text-primary);
+            padding: 0 8px;
+            box-sizing: border-box;
+        }
+        #input-id, #input-nombre {
+            width: 80px;
+            min-width: 0;
+            text-align: center;
+        }
+        #guardar-btn {
+            background: #4a4e69;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: 600;
+        }
+        #guardar-btn:hover {
+            background: #6a6e9a;
+        }
+        .control-button { width: 32px; height: 32px; background-color: rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; color: var(--text-primary); font-size: 0.9rem; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 4px; }
+        #reset-button { background-color: rgba(219, 104, 121, 0.5); }
+        #reset-button:hover { background-color: rgba(219, 104, 121, 0.7); }
+
+        .dps-timer-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .timer-btn {
+            flex: 1;
+            padding: 8px 0;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 8px;
+            background: #444b5a;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            max-width: 180px;
+        }
+        .timer-btn:hover {
+            background: #5a5f73;
+        }
+        .timer-btn i {
+            margin-right: 5px;
+        }
+        #player-bars-container { display: flex; flex-direction: column; gap: 8px; }
+        .player-bar { background-color: var(--bar-bg-color); border-radius: 8px; height: 55px; position: relative; overflow: hidden; }
+        .progress-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 8px; transition: width 0.4s ease-out; z-index: 1; }
+        .player-bar[data-rank="1"] .progress-fill { background-color: var(--rank-1-color); }
+        .player-bar[data-rank="2"] .progress-fill { background-color: var(--rank-2-color); }
+        .player-bar[data-rank="3"] .progress-fill { background-color: var(--rank-3-color); }
+        .player-bar[data-rank="4"] .progress-fill { background-color: var(--rank-4-color); }
+        .player-bar[data-rank-default] .progress-fill { background-color: var(--rank-default-color); }
+        .bar-content { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; height: 100%; }
+        .player-info { display: flex; flex-direction: column; justify-content: center; }
+        .player-name { font-size: 1rem; font-weight: 700; min-height: 1.2em; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-id { font-size: 0.75rem; color: var(--text-secondary); }
+        .player-performance { display: flex; align-items: center; gap: 10px; }
+        /* Contenedor para la lista de estadísticas */
+        .stats-list { display: flex; flex-direction: column; align-items: flex-end; }
+        /* Estilo para la estadística principal (más grande y con el porcentaje) */
+        .main-stat { font-size: 0.9rem; font-weight: 700; }
+        .main-stat .percentage { font-size: 0.8rem; color: var(--text-secondary); margin-left: 5px; }
+        /* Estilo para las estadísticas secundarias (más pequeñas) */
+        .secondary-stat { font-size: 0.75rem; color: var(--text-secondary); }
+        #message-display { text-align: center; padding: 20px; color: var(--text-secondary); }
+
+        /* Trucos para acercar elementos a la izquierda */
+        #reset-button {
+            margin-left: -4px;
+        }
+        #logs-section {
+            margin-left: -4px;
+            margin-right: -4px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 15px 0 10px 0;
+            margin-top: 10px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            text-shadow: var(--text-shadow);
+        }
+
+        .social-icons a {
+            color: var(--text-primary);
+            margin: 0 10px;
+            font-size: 1.5rem;
+            transition: color 0.3s;
+            text-shadow: var(--text-shadow);
+        }
+
+        .social-icons a:hover {
+            color: #db6879;
+        }
+    </style>
+</head>
+<body>
+<div class="dps-meter">
+        <header class="controls" style="justify-content: space-between; width: 100%; max-width: 400px; margin: 0 auto 10px auto;">
+            <button class="control-button" id="reset-button" title="Reset"><i class="fa-solid fa-arrows-rotate"></i></button>
+            <div id="dps-timer-btns" class="dps-timer-buttons" style="flex-grow: 1; justify-content: flex-end; display: none;">
+            </div>
+        </header>
+        <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+            <div id="dps-timer" style="text-align:center;font-size:1.2rem;font-weight:700;margin-top:4px;min-height:28px;color:#e0e0e0;display:none; text-shadow: var(--text-shadow);"></div>
+            <div id="logs-section" style="margin-top:8px;"></div>
+        </div>
+        <main id="player-bars-container"><div id="message-display">Esperando datos...</div></main>
+        <footer class="footer">
+            <div class="social-icons">
+                <a href="https://www.twitch.tv/mrsnakevt" target="_blank" title="Twitch"><i class="fab fa-twitch"></i></a>
+                <a href="https://kick.com/mrsnakevt" target="_blank" title="Kick"><i class="fab fa-kickstarter-k"></i></a>
+                <a href="https://www.youtube.com/@MrSnake_VT" target="_blank" title="YouTube"><i class="fab fa-youtube"></i></a>
+            </div>
+            <p>DPS Meter Created By MrSnakeVT</p>
+        </footer>
+    </div>
+
+<script>
+const professionMap = {
+    // Clases Principales
+    '雷影剑士': { name: 'Stormblade', icon: 'Stormblade.png', role: 'dps' },
+    '冰魔导师': { name: 'Frost Mage', icon: 'Frost Mage.png', role: 'dps' },
+    '涤罪恶火·战斧': { name: 'Fire Axe', icon: 'Fire Axe.png', role: 'dps' },
+    '青岚骑士': { name: 'Wind Knight', icon: 'Wind Knight.png', role: 'tank' },
+    '森语者': { name: 'Verdant Oracle', icon: 'Verdant Oracle.png', role: 'dps' },
+    '雷霆一闪·手炮': { name: 'Gunner', icon: 'desconocido.png', role: 'dps' },
+    '巨刃守护者': { name: 'Heavy Guardian', icon: 'baluarte_ferreo.png', role: 'tank' },
+    '暗灵祈舞·仪刀/仪仗': { name: 'Spirit Dancer', icon: 'desconocido.png', role: 'dps' },
+    '神射手': { name: 'Marksman', icon: 'arco_halcon.png', role: 'dps' },
+    '神盾骑士': { name: 'Shield Knight', icon: 'guardian.png', role: 'tank' },
+    '灵魂乐手': { name: 'Soul Musician', icon: 'sonido_feroz.png', role: 'dps' },
+
+    // Especializaciones
+    '居合': { name: 'laido Slash', icon: 'Stormblade.png', role: 'dps' },
+    '月刃': { name: 'MoonStrike', icon: 'MoonStrike.png', role: 'dps' },
+    '冰矛': { name: 'Icicle', icon: 'lanza_hielo.png', role: 'dps' },
+    '射线': { name: 'Frostbeam', icon: 'Frost Mage.png', role: 'dps' },
+    '防盾': { name: 'Vanguard', icon: 'guardian.png', role: 'tank' },
+    '岩盾': { name: 'Skyward', icon: 'Fire Axe.png', role: 'tank' },
+    '惩戒': { name: 'Smite', icon: 'castigo.png', role: 'dps' },
+    '愈合': { name: 'Lifebind', icon: 'Verdant Oracle.png', role: 'healer' },
+    '格挡': { name: 'Block', icon: 'guardian.png', role: 'tank' },
+    '狼弓': { name: 'Wildpack', icon: 'arco_lobo.png', role: 'dps' },
+    '鹰弓': { name: 'Falconry', icon: 'arco_halcon.png', role: 'dps' },
+    '光盾': { name: 'Shield', icon: 'egida_luz.png', role: 'tank' },
+    '协奏': { name: 'Concerto', icon: 'Concierto.png', role: 'dps' },
+    '狂音': { name: 'Dissonance', icon: 'sonido_feroz.png', role: 'dps' },
+    '空枪': { name: 'Empty Gun', icon: 'francotirador.png', role: 'dps' },
+    '重装': { name: 'Heavy Armor', icon: 'Wind Knight.png', role: 'dps' },
+
+};
+
+ const defaultProfession = { name: 'Unknown', icon: 'desconocido.png', role: 'dps' };
+
+    let lastTotalDamage = 0;
+    let lastDamageChangeTime = Date.now();
+    
+    document.getElementById('reset-button').addEventListener('click', () => {
+        resetDpsMeter();
+    });
+
+    const dpsTimerDiv = document.getElementById('dps-timer');
+
+    function resetDpsMeter() {
+        fetch('/api/clear'); // Siempre limpiar datos al resetear
+        dpsTimerDiv.style.display = 'none'; 
+        dpsTimerDiv.innerText = ''; 
+        console.log('Medidor reiniciado.');
+        lastTotalDamage = 0;
+        lastDamageChangeTime = Date.now();
+    }
+
+    function formatTimer(ms) {
+        const s = Math.max(0, Math.ceil(ms / 1000));
+        const min = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${min}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    async function fetchLogs() {
+        const res = await fetch('/logs-dps');
+        return await res.json();
+    }
+
+    function renderLogs(logs) {
+        let html = '';
+        if (logs.length === 0) {
+            html = '<div style="color:#aaa;text-align:center;">Sin logs guardados</div>';
+        } else {
+            html = '<select id="logs-dropdown" style="width:100%;padding:6px 4px;border-radius:6px;font-size:1rem;">' +
+                `<option value="-1">LOG</option>` +
+                logs.map((log, i) => `<option value="${i}">${log.fecha}</option>`).join('') + '</select>';
+            html += '<div id="log-preview"></div>';
+        }
+        logsSection.innerHTML = html;
+        if (logs.length > 0) {
+            let lastValue = -1;
+            const dropdown = document.getElementById('logs-dropdown');
+            dropdown.onchange = function() {
+                if (this.value == lastValue || this.value == -1) {
+                    showLogPreview(null);
+                    this.value = -1;
+                    lastValue = -1;
+                } else {
+                    showLogPreview(logs[this.value]);
+                    lastValue = this.value;
+                }
+            };
+        }
+    }
+
+    function showLogPreview(log) {
+        const logPreview = document.getElementById('log-preview');
+        if (logPreviewTimeout) {
+            clearTimeout(logPreviewTimeout);
+        }
+
+        if (!log) {
+            logPreview.innerHTML = '';
+            return;
+        }
+
+        let prof = professionMap && log.icon ? Object.values(professionMap).find(p => p.icon === log.icon) : null;
+        let profName = prof ? prof.name : '';
+        logPreview.innerHTML = `<div class=\"player-bar\" style=\"margin-top:10px;\">\n            <div class=\"progress-fill\" style=\"width: 100%; background: #444b5a;\"></div>\n            <div class=\"bar-content\">\n                <div class=\"player-info\">\n                    <span class=\"player-name\">${log.nombre}</span>\n                    <span class=\"player-id\">ID: ${log.id}</span>\n                    <span class=\"player-id\">${profName}</span>\n                </div>\n                <div class=\"player-performance\">\n                    <div class=\"stats-list\">\n                        <span class=\"main-stat\">DPS ${formatStat(log.dps)}</span>\n                        <span class=\"secondary-stat\">HPS ${formatStat(log.hps)}</span>\n                        <span class=\"secondary-stat\">DTPS ${formatStat(log.dtps)}</span>\n                    </div>\n                    <img class=\"class-icon\" src=\"icons/${log.icon}\" alt=\"icon\">\n                </div>\n            </div>\n        </div>`;
+        logPreviewTimeout = setTimeout(() => { 
+            logPreview.innerHTML = '';
+        }, 7000);
+    }
+
+    async function updateLogsUI() {
+        const logs = await fetchLogs();
+        renderLogs(logs);
+    }
+
+    function getHealthColor(percentage) {
+        const r1 = 220, g1 = 53, b1 = 69; // Rojo para HP bajo (#dc3545)
+        const r2 = 40, g2 = 167, b2 = 69; // Verde para HP alto (#28a745)
+
+        const r = Math.round(r1 + (r2 - r1) * (percentage / 100));
+        const g = Math.round(g1 + (g2 - g1) * (percentage / 100));
+        const b = Math.round(b1 + (b2 - b1) * (percentage / 100));
+
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    function formatStat(value) {
+        if (value >= 1000000000000) {
+            return (value / 1000000000000).toFixed(1) + 'T';
+        }
+        if (value >= 1000000000) {
+            return (value / 1000000000).toFixed(1) + 'G';
+        }
+        if (value >= 1000000) {
+            return (value / 1000000).toFixed(1) + 'M';
+        }
+        if (value >= 1000) {
+            return (value / 1000).toFixed(1) + 'k';
+        }
+        return value.toFixed(0);
+    }
+
+    const playerColors = [
+        'rgba(255, 99, 132, 0.7)', // Rojo
+        'rgba(54, 162, 235, 0.7)', // Azul
+        'rgba(255, 206, 86, 0.7)', // Amarillo
+        'rgba(75, 192, 192, 0.7)', // Verde
+        'rgba(153, 102, 255, 0.7)', // Morado
+        'rgba(255, 159, 64, 0.7)' // Naranja
+    ];
+
+    async function fetchDataAndRender() {
+        const container = document.getElementById('player-bars-container');
+        try {
+
+            const [dataRes, diccRes, settingsRes] = await Promise.all([
+                fetch('/api/data'),
+                fetch('/api/diccionario'),
+                fetch('/api/settings')
+            ]);
+            const userData = await dataRes.json();
+            const diccionarioData = await diccRes.json();
+            const currentGlobalSettings = await settingsRes.json();
+
+            if (!userData.user || Object.keys(userData.user).length === 0) {
+                container.innerHTML = '<div id="message-display">Esperando datos...</div>';
+                return;
+            }
+
+            let userArray = Object.values(userData.user);
+
+            userArray = userArray.filter(u => u.total_damage && u.total_damage.total > 0);
+
+            if (userArray.length === 0) {
+                container.innerHTML = '<div id="message-display">Esperando datos...</div>';
+                return;
+            }
+
+            const sumaTotalDamage = userArray.reduce((acc, u) => acc + (u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0), 0);
+
+            if (sumaTotalDamage > 0) {
+                if (sumaTotalDamage !== lastTotalDamage) {
+                    lastTotalDamage = sumaTotalDamage;
+                    lastDamageChangeTime = Date.now();
+                } else {
+                    if (Date.now() - lastDamageChangeTime > 80000) {
+                        resetDpsMeter();
+                        return;
+                    }
+                }
+            } else {
+                lastTotalDamage = 0;
+                lastDamageChangeTime = Date.now();
+            }
+
+            userArray.forEach(u => {
+                const userDamage = u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0;
+                u.damagePercent = sumaTotalDamage > 0 ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) * 100)) : 0;
+            });
+
+            userArray.sort((a, b) => b.damagePercent - a.damagePercent);
+
+            container.innerHTML = userArray.map((u, index) => {
+                const professionParts = u.profession.split('-');
+                const mainProfessionKey = professionParts[0];
+                const subProfessionKey = professionParts[1];
+                
+                const mainProf = professionMap[mainProfessionKey] || defaultProfession;
+                const subProf = professionMap[subProfessionKey];
+
+                let prof = subProf || mainProf;
+                let professionName = mainProf.name;
+                if (subProf) {
+                    professionName += ` - ${subProf.name}`;
+                }
+
+                const dps = Number(u.total_dps) || 0;
+                const totalHealing = u.total_healing ? (Number(u.total_healing.total) || 0) : 0;
+                
+                const color = playerColors[index % playerColors.length];
+                const dpsColor = dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
+                
+                const nombre = u.name || '';
+                
+                const totalHits = u.total_count.total || 0;
+                const crit = (u.total_count.critical !== undefined && totalHits > 0) ? Math.round((u.total_count.critical / totalHits) * 100) : '0';
+                const lucky = (u.total_count.lucky !== undefined && totalHits > 0) ? Math.round((u.total_count.lucky / totalHits) * 100) : '0';
+                const peak = (u.realtime_dps_max !== undefined) ? u.realtime_dps_max : 0;
+
+                return `<div class="player-bar" data-rank="${u.rank}">
+                    <div class="progress-fill" style="width: ${u.damagePercent}%; background: ${dpsColor}"></div>
+                    <div class="bar-content">
+                        <div class="column name-col">
+                            <span class="player-name">${nombre}</span>
+                            <div class="additional-stat-row" style="height: 18px; margin-top: 1px; margin-bottom: 1px;">
+                                <span class="additional-stat-icon" style="color: #dc3545; position: absolute; left: 4px; z-index: 2;">❤</span>
+                                <div class="hp-bar-background">
+                                    <div class="hp-bar-fill" style="width: ${((u.hp || 0) / (u.max_hp || 1)) * 100}%; background-color: ${getHealthColor(((u.hp || 0) / (u.max_hp || 1)) * 100)};"></div>
+                                </div>
+                                <span class="additional-stat-value" style="width: 100%; text-align: center; font-size: 0.8rem; color: white; text-shadow: 1px 1px 1px black;">${formatStat(u.hp || 0)}/${formatStat(u.max_hp || 0)}</span>
+                            </div>
+                            <span class="player-id">${professionName}</span>
+                        </div>
+                        <div class="column stats-col" style="margin-left: 40px;">
+                            <div class="stats-group">
+                                <div class="stat-row"><span class="stat-value">${formatStat(dps)}</span><span class="stat-label">DPS</span></div>
+                                <div class="stat-row"><span class="stat-value">${formatStat(u.total_hps || 0)}</span><span class="stat-label">HPS</span></div>
+                                <div class="stat-row"><span class="stat-value">${formatStat(u.taken_damage)}</span><span class="stat-label">DT</span></div>
+                            </div>
+                        </div>
+                        <div class="column icon-col" style="flex-direction: column; justify-content: center; align-items: center; text-align: center; min-width: 65px; position: relative; margin-left: -10px;">
+                            <img class="class-icon" src="icons/${prof.icon}" alt="icon" style="height: 42px; width: 42px;">
+                            <span style="font-size: 0.8rem; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 0 4px; border-radius: 5px; position: absolute; top: 12.5px; left: 50%; transform: translateX(-50%); text-shadow: 0 0 2px rgba(0,0,0,0.7);">${Math.round(u.damagePercent)}%</span>
+                        </div>
+                        <div class="column extra-col" style="margin-left: -10px;">
+                            <div class="stats-extra">
+                                <div class="stat-row">
+                                    <span class="stat-label">CRIT</span>
+                                    <span class="stat-icon"> ✸</span>
+                                    <span class="stat-value">${crit}%</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">LUCK</span>
+                                    <span class="stat-icon"> ☘</span>
+                                    <span class="stat-value">${lucky}%</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">MAX</span>
+                                    <span class="stat-icon"> ⚔</span>
+                                    <span class="stat-value">${formatStat(peak)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Nueva columna de estadísticas adicionales -->
+                        <div class="column additional-stats-col">
+                            <div class="additional-stats-group">
+                                <div class="additional-stat-row">
+                                    <span class="additional-stat-icon" style="font-weight: bold;">GS</span>
+                                    <span class="additional-stat-value">${formatStat(u.fightPoint)}</span>
+                                </div>
+                                <div class="additional-stat-row">
+                                    <span class="additional-stat-icon">🔥</span>
+                                    <span class="additional-stat-value">${formatStat(u.total_damage.total || 0)}</span>
+                                </div>
+                                <div class="additional-stat-row">
+                                    <span class="additional-stat-icon" style="color: #28a745;">⛨</span>
+                                    <span class="additional-stat-value">${formatStat(u.total_healing.total || 0)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (err) {
+            if (container) {
+                container.innerHTML = '<div id="message-display">Error de conexión...</div>';
+            }
+        }
+    }
+
+    // Actualizar UI cada 50ms
+    setInterval(fetchDataAndRender, 50);
+    fetchDataAndRender();
+    updateLogsUI();
+</script>
+</body>
+</html>
