@@ -58,6 +58,8 @@ La aplicación se abrirá como una ventana superpuesta. Cuando inicies el juego,
 
 ### Controles
 
+![Controles](Controles.png)
+
 - **Arrastrar:** Haz clic y arrastra el indicador de flechas para mover la ventana.
 - **Bloquear/Desbloquear:** Haz clic en el botón del candado para bloquear o desbloquear la posición de la ventana. Cuando está bloqueada, la ventana ignorará los clics del ratón.
 - **Zoom:** Utiliza los botones `+` y `-` para aumentar o disminuir el tamaño de la interfaz.
@@ -157,6 +159,8 @@ Once installed, you can launch the application from the Start Menu or the deskto
 The application will open as an overlay window. When you start the game, it will automatically begin detecting traffic and displaying combat stats.
 
 ### Controls
+
+![Controls](Controles.png)
 
 - **Drag:** Click and drag the arrow indicator to move the window.
 - **Lock/Unlock:** Click the lock button to lock or unlock the window's position. When locked, the window will ignore mouse clicks.
