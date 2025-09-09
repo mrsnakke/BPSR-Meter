@@ -1,0 +1,2 @@
+dist_electron/*.exe filter=lfs diff=lfs merge=lfs -text
+dist_electron/win-unpacked/*.exe filter=lfs diff=lfs merge=lfs -text

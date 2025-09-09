@@ -1,0 +1,16 @@
+# Dependencies
+/node_modules
+
+# Logs
+/logs
+/logs_dps.json
+dist/logs/
+
+# Build output
+/dist
+
+# Misc
+.npmrc
+/Prerequisites/npcap-1.83.exe
+pnpm-lock.yaml
+server - copia - copia.js

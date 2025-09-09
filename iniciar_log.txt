@@ -1,0 +1,7 @@
+[INFO] Iniciando script de lanzamiento BPSR Meter (App) - 07/09/2025 16:36:32.42
+
+[INFO] Verificando la instalación de Node.js...
+[INFO] Node.js version 22.15.0 detectada.
+
+[INFO] Verificando la instalación de npm...
+No se esperaba . en este momento.

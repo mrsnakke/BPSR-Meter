@@ -1,0 +1,34 @@
+directories:
+  output: dist_electron
+  buildResources: build
+appId: com.bpsr.meter
+productName: BPSR Meter
+files:
+  - filter:
+      - electron-main.js
+      - server.js
+      - preload.js
+      - algo/**/*
+      - public/**/*
+      - tables/**/*
+      - diccionario.json
+      - player_map.json
+      - settings.json
+      - users.json
+      - icon.ico
+      - icon.png
+      - medidor.png
+      - portada.png
+extraResources:
+  - from: node_modules/cap/
+    to: cap/
+    filter:
+      - '**/*'
+win:
+  icon: icon.ico
+  target:
+    - nsis
+nsis:
+  include: extra.nsh
+  deleteAppDataOnUninstall: true
+electronVersion: 38.0.0
