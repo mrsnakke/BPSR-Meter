@@ -58,7 +58,7 @@ La aplicación se abrirá como una ventana superpuesta. Cuando inicies el juego,
 
 ### Controles
 
-| ![Imagen DPS](DPS.png) | ![Imagen Tanque](Tank.png) | ![Imagen Sanador](Healer.png) |
+| ![Imagen DPS](Advanced.png) | ![Imagen Tanque](DPS.png.png) | ![Imagen Sanador](Lite.png) |
 | :---: |:---:| :---:|
 
 - **Arrastrar:** Haz clic y arrastra el indicador de flechas para mover la ventana.
@@ -161,7 +161,7 @@ The application will open as an overlay window. When you start the game, it will
 
 ### Controls
 
-| ![Imagen DPS](DPS.png) | ![Imagen Tanque](Tank.png) | ![Imagen Sanador](Healer.png) |
+| ![Imagen DPS](Advanced.png) | ![Imagen Tanque](DPS.png.png) | ![Imagen Sanador](Lite.png) |
 | :---: |:---:| :---:|
 
 - **Drag:** Click and drag the arrow indicator to move the window.
