@@ -58,7 +58,9 @@ La aplicación se abrirá como una ventana superpuesta. Cuando inicies el juego,
 
 ### Controles
 
-![Controles](Controles.png)
+![Controles]
+| ![Controles](Advanced.png) | ![Controles](Lite.png) |
+|:---:|:---:|
 
 - **Arrastrar:** Haz clic y arrastra el indicador de flechas para mover la ventana.
 - **Bloquear/Desbloquear:** Haz clic en el botón del candado para bloquear o desbloquear la posición de la ventana. Cuando está bloqueada, la ventana ignorará los clics del ratón.
