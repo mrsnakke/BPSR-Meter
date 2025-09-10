@@ -58,7 +58,6 @@ La aplicación se abrirá como una ventana superpuesta. Cuando inicies el juego,
 
 ### Controles
 
-![Controles]
 | ![Controles](Advanced.png) | ![Controles](Lite.png) |
 |:---:|:---:|
 
@@ -162,7 +161,8 @@ The application will open as an overlay window. When you start the game, it will
 
 ### Controls
 
-![Controls](Controles.png)
+| ![Controles](Advanced.png) | ![Controles](Lite.png) |
+|:---:|:---:|
 
 - **Drag:** Click and drag the arrow indicator to move the window.
 - **Lock/Unlock:** Click the lock button to lock or unlock the window's position. When locked, the window will ignore mouse clicks.
