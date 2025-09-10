@@ -91,13 +91,18 @@ Si la aplicación no funciona correctamente, revisa el archivo de log `iniciar_l
 > Sí, puedes ocultarlo haciendo clic en el icono de la barra de tareas.
 
 **¿Se pueden ocultar más datos?**
-> No, estoy trabajando en una versión lite que solo muestre las barras de daño más pequeñas con el nombre del jugador.
+> Sí, ahora existen los botones "Advanced" y "Lite", que te permiten cambiar entre la versión extendida y la simplificada.
+
 
 **¿Funciona con otros juegos?**
 > No. Está diseñado específicamente para decodificar los paquetes de red de este juego.
 
 **¿Funciona en el servidor chino?**
 > Sí, funciona correctamente en el servidor chino.
+
+
+**¿Hay versión para healer?**
+> Sí, al estar en modo "Lite", aparecerá a un lado un botón que permite cambiar entre la versión de DPS y la de Healer. Ahora puedes optimizar tus rotaciones y ver tu sanación por segundo (HPS) y tu contribución total.
 
 ---
 
@@ -194,13 +199,16 @@ If the application isn't working correctly, check the `iniciar_log.txt` log file
 > Yes, you can hide it by clicking its icon in the taskbar.
 
 **Can more data be hidden?**
-> Not at the moment. I'm working on a lite version that will only show smaller damage bars with player names.
+> Yes, there are now "Advanced" and "Lite" buttons that allow you to switch between the extended and simplified versions.
 
 **Does it work with other games?**
 > No. It's specifically designed to decode the network packets for this game.
 
 **Does it work on the Chinese server?**
 > Yes, it works correctly on the Chinese server.
+
+**Is there a version for healers?**
+> Yes, when in "Lite" mode, a button will appear on the side that allows you to switch between the DPS and Healer versions. You can now optimize your rotations and see your healing per second (HPS) and total contribution.
 
 ---
 
