@@ -1,0 +1,40 @@
+REPARACIONES Y CAMBIOS REALIZADOS PARA EMPAQUETADO EXITOSO (2025)
+
+1. Actualización de dependencias:
+   - Electron actualizado a la última versión (38.0.0) para máxima compatibilidad con Node.js y módulos nativos.
+   - google-protobuf actualizado a la versión 4.0.0.
+   - Verificadas y actualizadas otras dependencias principales y de desarrollo.
+
+2. Corrección de rutas y empaquetado:
+   - Corregida la ruta de iconos en el HTML para evitar rutas absolutas.
+   - Ajustada la función de log para escribir en la carpeta de usuario (APPDATA/bpsr-meter), compatible con entorno empaquetado.
+   - Corregida la forma de lanzar server.js usando fork y app.getAppPath() para que funcione dentro de app.asar.
+   - Eliminadas variables duplicadas en electron-main.js para evitar errores de compilación.
+   - Revisadas rutas y dependencias en preload.js, server.js y archivos protobuf.
+
+3. Manejo de errores y logs:
+   - Implementado log de arranque y errores en iniciar_log.txt.
+   - Mensaje visual en la ventana si el servidor no responde.
+   - Validación de errores tras cada actualización de dependencias.
+
+4. Desinstalador avanzado:
+   - Script NSIS personalizado para eliminar la carpeta de datos de usuario en Roaming al desinstalar.
+   - Corregido extra.nsh para evitar errores de compilación.
+
+5. Compatibilidad y advertencias:
+   - Se detectó y documentó la advertencia sobre espacios en la ruta del proyecto al compilar módulos nativos (como cap).
+   - El build fue exitoso, pero se recomienda evitar espacios en la ruta del proyecto para máxima compatibilidad con node-gyp y módulos nativos.
+
+
+¿CÓMO EVITAR LA ADVERTENCIA DE "space in the path" AL EMPAQUETAR?
+
+- Mueve tu proyecto a una ruta sin espacios, por ejemplo:
+  De: F:\DPS-METER-by-MrSnake\BPSR Meter overlay
+  A:   F:\DPS-METER-by-MrSnake\BPSR-Meter-Overlay
+
+- Renombra la carpeta si es necesario y actualiza cualquier acceso directo o script que apunte a la ruta anterior.
+- Vuelve a ejecutar `pnpm install` y luego `pnpm run dist`.
+
+Esto eliminará la advertencia y reducirá el riesgo de problemas con módulos nativos en el futuro.
+
+Si necesitas más detalles de algún cambio, consulta este archivo o pide ayuda aquí.
