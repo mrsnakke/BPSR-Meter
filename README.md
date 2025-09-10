@@ -46,7 +46,7 @@ BPSR Meter es una aplicación de escritorio que funciona como un medidor de DPS 
 ### Video Tutorial
 Para una guía visual sobre cómo instalar y configurar el medidor, puedes ver el siguiente video:
 
-[![Video Tutorial de YouTube](PORTADA2.jpg)](https://youtu.be/dCBPiaj0w8c)
+[![Video Tutorial de YouTube](PORTADA2.jpg)](https://youtu.be/QvGLjNvhKsw)
 
 ---
 
@@ -148,7 +148,7 @@ BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Sec
 ### Video Tutorial
 For a visual guide on how to install and set up the meter, you can watch the following video:
 
-[![YouTube Video Tutorial](PORTADA2.jpg)](https://youtu.be/dCBPiaj0w8c)
+[![YouTube Video Tutorial](PORTADA2.jpg)](https://youtu.be/QvGLjNvhKsw)
 
 ---
 
