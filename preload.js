@@ -8,6 +8,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onLockStateChanged: (callback) => ipcRenderer.on('lock-state-changed', (event, isLocked) => callback(isLocked)),
     allowMouseEvents: () => ipcRenderer.send('allow-mouse-events'),
     ignoreMouseEvents: () => ipcRenderer.send('ignore-mouse-events'),
+    focusWindow: () => ipcRenderer.send('focus-window'),
+    mouseEnter: () => ipcRenderer.send('mouse-enter'),
+    mouseLeave: () => ipcRenderer.send('mouse-leave'),
+    onClearDpsData: (callback) => ipcRenderer.on('clear-dps-data', () => callback()),
 });
 
 window.addEventListener('DOMContentLoaded', () => {

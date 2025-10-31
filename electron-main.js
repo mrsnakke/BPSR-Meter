@@ -1,5 +1,5 @@
 
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const { exec, fork } = require('child_process');
 const net = require('net'); // Necesario para checkPort
@@ -24,7 +24,27 @@ let mainWindow;
 let serverProcess;
 let server_port = 8989; // Puerto inicial
 let isLocked = false; // Estado inicial del candado: desbloqueado
+let isClearOnServerChangeDisabled = false; // Nuevo estado para el botón ExitLag
 logToFile('==== INICIO DE ELECTRON ====');
+
+// Fuerza la ventana a comportarse como overlay incluso sobre apps en pantalla completa
+function promoteOverlayWindow(win, { focus = false } = {}) {
+    if (!win) return;
+    win.setAlwaysOnTop(true, 'screen-saver', 1);
+    if (typeof win.setVisibleOnAllWorkspaces === 'function') {
+        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    }
+    if (typeof win.setFullScreenable === 'function') {
+        win.setFullScreenable(false);
+    }
+    win.setSkipTaskbar(false);
+    if (typeof win.moveTop === 'function') {
+        win.moveTop();
+    }
+    if (focus) {
+        win.focus();
+    }
+}
 
     // Función para verificar si un puerto está en uso
     const checkPort = (port) => {
@@ -39,7 +59,7 @@ logToFile('==== INICIO DE ELECTRON ====');
     };
 
     async function findAvailablePort() {
-        let port = 8989;
+        let port = server_port;
         while (true) {
             if (await checkPort(port)) {
                 return port;
@@ -102,6 +122,16 @@ logToFile('==== INICIO DE ELECTRON ====');
             icon: path.join(__dirname, 'icon.ico'),
         });
 
+        promoteOverlayWindow(mainWindow);
+
+        mainWindow.once('ready-to-show', () => {
+            promoteOverlayWindow(mainWindow, { focus: true });
+        });
+
+        mainWindow.on('show', () => promoteOverlayWindow(mainWindow));
+        mainWindow.on('focus', () => promoteOverlayWindow(mainWindow));
+        mainWindow.on('restore', () => promoteOverlayWindow(mainWindow, { focus: true }));
+
         // Iniciar el servidor Node.js, pasando el puerto como argumento
 
         // Determinar ruta absoluta a server.js según entorno
@@ -128,8 +158,18 @@ logToFile('==== INICIO DE ELECTRON ====');
         createWindow.serverLoaded = false;
         createWindow.serverTimeout = setTimeout(() => {
             if (!createWindow.serverLoaded) {
+               const errorHtml = `
+                    <h1 style="color:red; font-size:2em;">
+                        Error: El servidor no respondió a tiempo
+                    </h1>
+                    <h2 style="color:red; font-size:1.5em;">
+                        <p>Esto puede deberse a que otro programa ya está usando el puerto ${server_port} o hubo un fallo al iniciar Node.js.</p>
+                        <p>Revisa ..\\AppData\\Roaming\\bpsr-meter\\iniciar_log.txt para más detalles.</p>
+                    </h2>
+                `;
                 logToFile('ERROR: El servidor no respondió a tiempo.');
-                mainWindow.loadURL('data:text/html,<h2 style="color:red">Error: El servidor no respondió a tiempo.<br>Revisa iniciar_log.txt para más detalles.</h2>');
+                mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(errorHtml)
+                );
             }
         }, 10000); // 10 segundos de espera
 
@@ -149,15 +189,10 @@ logToFile('==== INICIO DE ELECTRON ====');
         });
         serverProcess.on('close', (code) => {
             logToFile('server process exited with code ' + code);
-        });
-
-        let serverLoaded = false;
-        let serverTimeout = setTimeout(() => {
-            if (!serverLoaded) {
-                logToFile('ERROR: El servidor no respondió a tiempo.');
-                mainWindow.loadURL('data:text/html,<h2 style="color:red">Error: El servidor no respondió a tiempo.<br>Revisa iniciar_log.txt para más detalles.</h2>');
+            if (code !== 0 && !createWindow.serverLoaded) {
+                logToFile('ERROR: El servidor terminó inesperadamente antes de iniciar.');
             }
-        }, 10000); // 10 segundos de espera
+        });
 
         serverProcess.stdout.on('data', (data) => {
             logToFile('server stdout: ' + data);
@@ -167,8 +202,8 @@ logToFile('==== INICIO DE ELECTRON ====');
                 const serverUrl = match[1];
                 logToFile('Cargando URL en ventana: ' + serverUrl + '/index.html');
                 mainWindow.loadURL(`${serverUrl}/index.html`);
-                serverLoaded = true;
-                clearTimeout(serverTimeout);
+                createWindow.serverLoaded = true;
+                clearTimeout(createWindow.serverTimeout);
             }
         });
 
@@ -226,7 +261,10 @@ logToFile('==== INICIO DE ELECTRON ====');
             } else {
                 // Cuando se desbloquea, procesar eventos del ratón normalmente
                 mainWindow.setIgnoreMouseEvents(false);
+                mainWindow.focus(); // Asegurar que la ventana recupere el foco
+                mainWindow.setAlwaysOnTop(true); // Asegurar que se mantenga al frente
             }
+            promoteOverlayWindow(mainWindow);
             mainWindow.webContents.send('lock-state-changed', isLocked); // Notificar al renderizador
             console.log(`Candado: ${isLocked ? 'Cerrado' : 'Abierto'}`);
         }
@@ -236,16 +274,56 @@ logToFile('==== INICIO DE ELECTRON ====');
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.webContents.send('lock-state-changed', isLocked);
     });
+
+    // Manejar el evento para enfocar la ventana y ponerla siempre al frente
+    ipcMain.on('focus-window', () => {
+        if (mainWindow) {
+            mainWindow.focus();
+            mainWindow.setAlwaysOnTop(true);
+        }
+    });
+
+    // Manejar eventos de entrada/salida del ratón para controlar setIgnoreMouseEvents
+    ipcMain.on('mouse-enter', () => {
+        if (mainWindow && isLocked) {
+            mainWindow.setIgnoreMouseEvents(false); // Permitir interacción con el medidor
+        }
+    });
+
+    ipcMain.on('mouse-leave', () => {
+        if (mainWindow && isLocked) {
+            mainWindow.setIgnoreMouseEvents(true, { forward: true }); // Volver a reenviar eventos al juego
+        }
+    });
+
+    // Manejar el estado del botón ExitLag
+    ipcMain.on('toggleClearOnServerChange', (event, isDisabled) => {
+        isClearOnServerChangeDisabled = isDisabled;
+        console.log(`Limpiar datos al cambiar de servidor: ${!isClearOnServerChangeDisabled}`);
+    });
 }
 
 app.whenReady().then(() => {
     createWindow();
+
+    // Registrar atajo de teclado global para F10
+    globalShortcut.register('F10', () => {
+        console.log('F10 is pressed');
+        if (mainWindow) {
+            mainWindow.webContents.send('clear-dps-data');
+        }
+    });
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
         }
     });
+});
+
+app.on('will-quit', () => {
+    // Anular el registro de todos los atajos de teclado cuando la aplicación se cierra
+    globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {

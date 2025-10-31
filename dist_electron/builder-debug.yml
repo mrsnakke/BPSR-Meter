@@ -17,6 +17,7 @@ x64:
     - icon.png
     - medidor.png
     - portada.png
+    - public/ExitLag.png
     - package.json
     - '!**/*.{iml,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,suo,xproj,cc,d.ts,mk,a,o,obj,forge-meta,pdb}'
     - '!**/._*'
@@ -41,10 +42,11 @@ x64:
     - icon.png
     - medidor.png
     - portada.png
+    - public/ExitLag.png
 nsis:
   script: |-
-    !include "F:\DPS-METER-by-MrSnake\BPSR-Meter-master\node_modules\.pnpm\app-builder-lib@26.0.12_dmg_b995bd80b8ff3a8a64cee8adb9a5f824\node_modules\app-builder-lib\templates\nsis\include\StdUtils.nsh"
-    !addincludedir "F:\DPS-METER-by-MrSnake\BPSR-Meter-master\node_modules\.pnpm\app-builder-lib@26.0.12_dmg_b995bd80b8ff3a8a64cee8adb9a5f824\node_modules\app-builder-lib\templates\nsis\include"
+    !include "F:\DPS-METER-by-MrSnake\BPSR-Meter-master2.1.8\BPSR-Meter-master\node_modules\app-builder-lib\templates\nsis\include\StdUtils.nsh"
+    !addincludedir "F:\DPS-METER-by-MrSnake\BPSR-Meter-master2.1.8\BPSR-Meter-master\node_modules\app-builder-lib\templates\nsis\include"
     !macro _isUpdated _a _b _t _f
       ${StdUtils.TestParameter} $R9 "updated"
       StrCmp "$R9" "true" `${_t}` `${_f}`
@@ -116,10 +118,10 @@ nsis:
       !insertmacro MUI_LANGUAGE "Vietnamese"
     !macroend
 
-    !addincludedir "F:\DPS-METER-by-MrSnake\BPSR-Meter-master\build"
-    !include "F:\DPS-METER-by-MrSnake\BPSR-Meter-master\extra.nsh"
+    !addincludedir "F:\DPS-METER-by-MrSnake\BPSR-Meter-master2.1.8\BPSR-Meter-master\build"
+    !include "F:\DPS-METER-by-MrSnake\BPSR-Meter-master2.1.8\BPSR-Meter-master\extra.nsh"
+    !include "C:\Users\MrSna\AppData\Local\Temp\t-VH1wcL\2-messages.nsh"
     !addplugindir /x86-unicode "C:\Users\MrSna\AppData\Local\electron-builder\Cache\nsis\nsis-resources-3.4.1\plugins\x86-unicode"
-    !include "C:\Users\MrSna\AppData\Local\Temp\t-cOaRKA\2-messages.nsh"
 
     Var newStartMenuLink
     Var oldStartMenuLink

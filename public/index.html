@@ -565,8 +565,16 @@
             /* Los estilos de posición se moverán al inline style en el HTML */
         }
 
+        .sync-button {
+            cursor: pointer; /* Indicar que es clicable */
+        }
+
+        .sync-button {
+            cursor: pointer; /* Indicar que es clicable */
+        }
+
         .sync-button:hover {
-            background-color: rgba(0,0,0,0.2); /* No cambiar al pasar el ratón si no es un botón */
+            background-color: rgba(0,0,0,0.3); /* Ligeramente más oscuro al pasar el ratón */
         }
 
         @keyframes spin {
@@ -667,6 +675,23 @@
         .social-icons a:hover {
             color: #db6879;
         }
+
+        /* Estilos para el botón ExitLag */
+        #exitlag-button {
+            background-image: url('ExitLag.png');
+            background-size: contain; /* Cambiado a 'contain' para asegurar que la imagen completa sea visible */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: transparent; /* Asegurarse de que no haya un color de fondo sólido cubriendo la imagen */
+            border: 2px solid rgba(220, 53, 69, 0.7); /* Contorno rojo por defecto */
+            transition: border-color 0.2s ease-in-out, filter 0.2s ease-in-out;
+        }
+        #exitlag-button.active {
+            border-color: rgba(40, 167, 69, 0.9); /* Contorno verde cuando está activo */
+        }
+        #exitlag-button:hover {
+            filter: brightness(1.2); /* Ligeramente más brillante al pasar el ratón */
+        }
     </style>
 </head>
 <body>
@@ -694,6 +719,10 @@
             <div class="drag-indicator" id="drag-indicator" title="Mover ventana">
                 <i class="fa-solid fa-up-down-left-right"></i>
             </div>
+            <!-- Nuevo botón ExitLag -->
+            <button class="control-button" id="exitlag-button" title="Toggle ExitLag" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;">
+                <img src="ExitLag.png" alt="ExitLag Icon" style="width: 100%; height: 100%; object-fit: contain; pointer-events: none;">
+            </button>
             <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
         </header>
         <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
@@ -753,6 +782,8 @@ const professionMap = {
     let syncTimerDisplayTimeout; // Para el retardo de 200ms
     let isLocked = false; // Estado de bloqueo de la ventana
     let logPreviewTimeout; // Declarar logPreviewTimeout aquí
+    let lastNumPlayers = 0; // Para controlar el redimensionamiento por número de jugadores
+    let autoClearOnServerChange = true; // Estado para la configuración (true = limpieza automática activa)
 
     const dpsTimerDiv = document.getElementById('dps-timer');
     const playerBarsContainer = document.getElementById('player-bars-container');
@@ -760,6 +791,7 @@ const professionMap = {
     const syncIcon = document.querySelector('#sync-button .sync-icon');
     const syncTimerSpan = document.querySelector('#sync-button .sync-timer');
     const lockButton = document.getElementById('lock-button');
+    const exitLagButton = document.getElementById('exitlag-button'); // Referencia al nuevo botón
     const logsSection = document.getElementById('logs-section'); // Declarar logsSection aquí
 
     // Permitir interacción con Alt cuando está bloqueado
@@ -776,11 +808,44 @@ const professionMap = {
         }
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => { // Añadir async aquí
         const resetButton = document.getElementById('reset-button');
         if (resetButton) {
             resetButton.addEventListener('click', () => {
                 resetDpsMeter();
+            });
+        }
+
+        // Lógica para el nuevo botón ExitLag
+        if (exitLagButton) {
+            // Obtener el estado inicial del servidor
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                autoClearOnServerChange = settings.data.autoClearOnServerChange;
+                // El botón está activo (contorno verde) cuando autoClearOnServerChange es false
+                exitLagButton.classList.toggle('active', !autoClearOnServerChange);
+            } catch (error) {
+                console.error('Error al obtener la configuración inicial de ExitLag:', error);
+            }
+
+            exitLagButton.addEventListener('click', async () => { // Añadir async aquí
+                autoClearOnServerChange = !autoClearOnServerChange; // Alternar el estado
+                // El botón está activo (contorno verde) cuando autoClearOnServerChange es false
+                exitLagButton.classList.toggle('active', !autoClearOnServerChange);
+                // Enviar el nuevo estado a la API del servidor
+                try {
+                    await fetch('/api/toggle-clear-on-server-change', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ value: autoClearOnServerChange })
+                    });
+                    console.log('Estado de autoClearOnServerChange actualizado en el servidor:', autoClearOnServerChange);
+                } catch (error) {
+                    console.error('Error al actualizar autoClearOnServerChange en el servidor:', error);
+                }
             });
         }
 
@@ -798,6 +863,7 @@ const professionMap = {
                     liteDpsHealerBtn.style.display = isLiteMode ? 'inline-flex' : 'none';
                 }
                 fetchDataAndRender();
+                updateWindowSize(); // Redimensionar al cambiar de modo
             });
         }
         if (liteDpsHealerBtn) {
@@ -806,6 +872,7 @@ const professionMap = {
                 liteDpsHealerBtn.textContent = (liteModeType === 'dps') ? 'DPS' : 'Healer';
                 liteDpsHealerBtn.classList.toggle('lite', isLiteMode); /* Asegura que el botón Lite/Healer también tenga el estilo 'lite' */
                 fetchDataAndRender();
+                updateWindowSize(); // Redimensionar al cambiar de tipo en modo Lite
             });
         }
         // Inicializar visibilidad y estilo del botón al cargar
@@ -832,7 +899,9 @@ const professionMap = {
         }
 
         if (syncButton) {
-            // syncButton.addEventListener('click', syncData); // El botón de sincronización ya no es clicable
+            syncButton.addEventListener('click', () => {
+                resetDpsMeter();
+            });
         }
 
         if (lockButton) {
@@ -884,14 +953,16 @@ const professionMap = {
         const barGap = 8;    // Espacio entre barras
 
         const numPlayers = container.querySelectorAll('.player-bar').length;
-        const numPlayersCapped = Math.min(numPlayers, 10); // Limitar a 10 barras
+        // Asegurar que la altura mínima sea para 10 barras, o el número actual de jugadores si es mayor
+        const numPlayersForHeightCalculation = Math.max(numPlayers, 10); 
 
         let barsHeight = 0;
-        if (numPlayersCapped > 0) {
-            barsHeight = (numPlayersCapped * barHeight) + ((numPlayersCapped - 1) * barGap);
-        } else {
-            // Altura mínima para el mensaje "Esperando datos..."
-            barsHeight = 50;
+        // Calcular la altura para el número de jugadores para el cálculo, o 10 si no hay jugadores
+        barsHeight = (numPlayersForHeightCalculation * barHeight) + ((numPlayersForHeightCalculation - 1) * barGap);
+        
+        // Si no hay jugadores, asegurar una altura mínima para el mensaje "Esperando datos..."
+        if (numPlayers === 0) {
+            barsHeight = (10 * barHeight) + (9 * barGap); // Altura para 10 barras
         }
 
         // Calcular la altura total sin escalar, incluyendo la cabecera y un búfer
@@ -1052,18 +1123,18 @@ const professionMap = {
 
     function formatStat(value) {
         if (value >= 1000000000000) {
-            return (value / 1000000000000).toFixed(1) + 'T';
+            return (Math.floor((value / 1000000000000) * 10) / 10) + 'T';
         }
         if (value >= 1000000000) {
-            return (value / 1000000000).toFixed(1) + 'G';
+            return (Math.floor((value / 1000000000) * 10) / 10) + 'G';
         }
         if (value >= 1000000) {
-            return (value / 1000000).toFixed(1) + 'M';
+            return (Math.floor((value / 1000000) * 10) / 10) + 'M';
         }
         if (value >= 1000) {
-            return (value / 1000).toFixed(1) + 'k';
+            return (Math.floor((value / 1000) * 10) / 10) + 'k';
         }
-        return value.toFixed(0);
+        return Math.floor(value).toFixed(0);
     }
 
     const playerColors = [
@@ -1141,6 +1212,12 @@ const professionMap = {
             }
             
             userArray = userArray.slice(0, 20);
+
+            const currentNumPlayers = userArray.length;
+            if (currentNumPlayers !== lastNumPlayers) {
+                lastNumPlayers = currentNumPlayers;
+                updateWindowSize();
+            }
 
             if (isLiteMode) {
                 container.innerHTML = userArray.map((u, index) => {
@@ -1274,7 +1351,7 @@ const professionMap = {
             }
         } finally {
             updateSyncButtonState();
-            updateWindowSize();
+            // updateWindowSize(); // Eliminado para evitar redimensionamientos constantes
         }
     }
 
@@ -1328,8 +1405,44 @@ const professionMap = {
 
         // Ejecutar la función inmediatamente y luego con un pequeño retraso para capturar inyecciones tardías
         removeDebugText();
-        setTimeout(removeDebugText, 500); // Reintentar después de 500ms
+    setTimeout(removeDebugText, 500); // Reintentar después de 500ms
     });
+
+    // Script para manejar el foco de la ventana cuando está bloqueada
+    let currentLockState = false;
+
+    if (window.electronAPI) {
+        window.electronAPI.onLockStateChanged((isLocked) => {
+            currentLockState = isLocked;
+        });
+    }
+
+    document.addEventListener('click', () => {
+        if (currentLockState && window.electronAPI) {
+            window.electronAPI.focusWindow();
+        }
+    });
+
+    // Manejar eventos de ratón para controlar setIgnoreMouseEvents en el proceso principal
+    document.body.addEventListener('mouseenter', () => {
+        if (window.electronAPI) {
+            window.electronAPI.mouseEnter();
+        }
+    });
+
+    document.body.addEventListener('mouseleave', () => {
+        if (window.electronAPI) {
+            window.electronAPI.mouseLeave();
+        }
+    });
+
+    // Escuchar el evento para limpiar datos de DPS desde el proceso principal (F10)
+    if (window.electronAPI) {
+        window.electronAPI.onClearDpsData(() => {
+            console.log('Evento clear-dps-data recibido. Reiniciando medidor.');
+            resetDpsMeter();
+        });
+    }
 </script>
 </body>
 </html>

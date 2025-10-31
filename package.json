@@ -1,6 +1,6 @@
 {
   "name": "bpsr-meter",
-  "version": "2.1.6",
+  "version": "2.5.0",
   "description": "BPSR Meter",
   "main": "electron-main.js",
   "bin": {
@@ -71,7 +71,8 @@
       "icon.ico",
       "icon.png",
       "medidor.png",
-      "portada.png"
+      "portada.png",
+      "public/ExitLag.png"
     ],
     "extraResources": [
       {
@@ -80,6 +81,10 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "resources/vc_redist.x64.exe",
+        "to": "vc_redist.x64.exe"
       }
     ],
     "win": {

@@ -19,11 +19,14 @@ files:
       - icon.png
       - medidor.png
       - portada.png
+      - public/ExitLag.png
 extraResources:
   - from: node_modules/cap/
     to: cap/
     filter:
       - '**/*'
+  - from: resources/vc_redist.x64.exe
+    to: vc_redist.x64.exe
 win:
   icon: icon.ico
   target:
@@ -31,4 +34,4 @@ win:
 nsis:
   include: extra.nsh
   deleteAppDataOnUninstall: true
-electronVersion: 38.0.0
+electronVersion: 38.1.0
