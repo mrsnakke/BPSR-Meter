@@ -1,3 +1,20 @@
+/*
+This file is part of BPSR-Meter.
+
+BPSR-Meter is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+BPSR-Meter is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 const cap = require('cap');
 const cors = require('cors');
 const readline = require('readline');
@@ -23,6 +40,14 @@ const findDefaultNetworkDevice = require('./algo/netInterfaceUtil');
 const skillConfig = require('./tables/skill_names.json').skill_names;
 const VERSION = '3.1';
 const SETTINGS_PATH = path.join('./settings.json');
+
+// Función para enviar el UID del jugador local al proceso principal de Electron
+function sendLocalPlayerUidToMain(uid) {
+    if (process.send) {
+        process.send({ type: 'local-player-uid', uid: uid });
+    }
+}
+
 let globalSettings = {
     autoClearOnServerChange: true, // Limpiar datos al cambiar de canal/servidor
     autoClearOnTimeout: true, // Revertido a true, para que los datos se limpien después de un tiempo
@@ -129,7 +154,7 @@ function getSubProfessionBySkillId(skillId) {
             return '防盾';
         case 2406:
             return '光盾';
-        case 199902:
+        case 1922:
             return '岩盾';
         case 1930:
         case 1931:
@@ -1017,6 +1042,13 @@ async function main() {
     // Inicialización asíncrona del gestor de datos de usuario
     await userDataManager.initialize();
 
+    // Instanciar PacketProcessor, pasándole el callback para el UID del jugador local
+    const packetProcessor = new PacketProcessor({
+        logger,
+        userDataManager,
+        onLocalPlayerUidDetected: sendLocalPlayerUidToMain,
+    });
+
     // Guardar caché de usuario al salir del proceso
     process.on('SIGINT', async () => {
         console.log('\nGuardando caché de usuario...');
@@ -1625,8 +1657,7 @@ async function main() {
             if (_data.length >= packetSize) {
                 const packet = _data.subarray(0, packetSize);
                 _data = _data.subarray(packetSize);
-                const processor = new PacketProcessor({ logger, userDataManager });
-                processor.processPacket(packet);
+                packetProcessor.processPacket(packet); // Usar la instancia existente
             } else if (packetSize > 0x0fffff) {
                 logger.error(`Invalid Length!! ${_data.length},${len},${_data.toString('hex')},${tcp_next_seq}`);
                 process.exit(1);

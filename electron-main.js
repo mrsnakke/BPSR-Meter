@@ -152,6 +152,14 @@ function promoteOverlayWindow(win, { focus = false } = {}) {
             execArgv: []
         });
 
+        // Escuchar mensajes del proceso hijo (server.js)
+        serverProcess.on('message', (message) => {
+            if (message.type === 'local-player-uid' && mainWindow) {
+                mainWindow.webContents.send('set-local-player-uid', message.uid);
+                console.log(`UID del jugador local recibido de server.js y enviado al renderizador: ${message.uid}`);
+            }
+        });
+
         // Variables para controlar el arranque del servidor
         if (typeof createWindow.serverLoaded === 'undefined') createWindow.serverLoaded = false;
         if (typeof createWindow.serverTimeout === 'undefined') createWindow.serverTimeout = null;
@@ -301,14 +309,22 @@ function promoteOverlayWindow(win, { focus = false } = {}) {
         isClearOnServerChangeDisabled = isDisabled;
         console.log(`Limpiar datos al cambiar de servidor: ${!isClearOnServerChangeDisabled}`);
     });
+
+    // Manejar el evento para establecer el UID del jugador local desde el proceso principal
+    ipcMain.on('set-local-player-uid', (event, uid) => {
+        if (mainWindow) {
+            mainWindow.webContents.send('set-local-player-uid', uid);
+            console.log(`UID del jugador local enviado al renderizador: ${uid}`);
+        }
+    });
 }
 
 app.whenReady().then(() => {
     createWindow();
 
-    // Registrar atajo de teclado global para F10
+    // Registrar atajo de teclado global para F10 (limpiar datos de DPS)
     globalShortcut.register('F10', () => {
-        console.log('F10 is pressed');
+        console.log('F10 is pressed - Clearing DPS data');
         if (mainWindow) {
             mainWindow.webContents.send('clear-dps-data');
         }

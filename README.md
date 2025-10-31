@@ -2,6 +2,12 @@
   <img src="portada.png" alt="Portada" width="800"/>
 </div>
 
+# Agradecimientos y Créditos
+
+Este proyecto, **BPSR Meter**, es una versión modificada y personalizada del excelente trabajo original de **dmlgzs**: [StarResonanceDamageCounter](https://github.com/dmlgzs/StarResonanceDamageCounter). Agradecemos enormemente su contribución a la comunidad. Puedes encontrar más detalles sobre los autores y contribuidores en [AUTHORS.md](AUTHORS.md).
+
+---
+
 # BPSR Meter - Medidor de DPS para Blue Protocol
 
 [![English](https://img.shields.io/badge/English-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NDAgNjMwIj48cGF0aCBmaWxsPSIjYjIyMjM0IiBkPSJNMCAwaDk4MHY2ODNIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCA3Nmg5ODB2NTJIMHptMCAxNTJoOTgwdi01Mkgwem0wIDE1Mmg5ODB2LTUySDB6bTAgMTUyaDk4MHYtNTJIMHptMCAxNTJoOTgwdi01MkgweiIvPjxwYXRoIGZpbGw9IiMwMDMyOTYiIGQ9Ik0wIDBoNDIwVjM2OEgwem0zMCAyNGwzMyAxMDIgMTAtMzEtMzItODcgNzIgMzcgOTctMzcgMTIgMzItNzIgODYgMTIgMzEgOTYtMzcgNzIgMzYtMzItODcgMTAtMzIgMzMgMTAyLTEwMy02Mi0xMDMgNjIgMzMgMTAyIDEwLTMxLTMyLTg3IDcyIDM3IDk7LTM3IDEyIDMyLTcyIDg2IDEyIDMxIDk2LTM3IDcyIDM2LTMyLTg3IDEwLTMyIDMzIDEwMi0xMDMtNjItMTAzIDYyem0wIDEyMGwzMyAxMDIgMTAtMzEtMzItODcgNzIgMzcgOTctMzcgMTIgMzItNzIgODYgMTIgMzEgOTYtMzcgNzIgMzYtMzItODcgMTAtMzIgMzMgMTAyLTEwMy02Mi0xMTAgNjIgMzMgMTAyIDEwLTMxLTMyLTg3IDcyIDM3IDk3LTM3IDEyIDMyLTcyIDg2IDEyIDMxIDk2LTM3IDcyIDM2LTMyLTg3IDEwLTMyIDMzIDEwMi0xMDMtNjItMTAzIDYyem0xNjggMTIwbDMzIDEwMiAxMC0zMS0zMi04NyA3MiAzNyA5Ny0zNyAxMiAzMi03MiA4NiAxMiAzMSA5Ni0zNyA3MiAzNi0zMi04NyAxMC0zMiAzMyAxMDItMTAzLTYyLTEwMyA2MnoiLz48L3N2Zz4=)](#bpsr-meter-english-version)
@@ -35,9 +41,10 @@ BPSR Meter es una aplicación de escritorio que funciona como un medidor de DPS 
 
 ## Instalación
 
-1.  **Descargar el instalador:** Ve a la sección de "Releases" de este repositorio de GitHub y descarga la última versión del instalador (`BPSR Meter Setup X.X.X.exe`).
-2.  **Ejecutar el instalador:** Ejecuta el archivo `.exe` descargado y sigue las instrucciones para instalar la aplicación en tu computadora.
-3.  **Instalar Npcap:** La aplicación requiere Npcap para capturar el tráfico de red del juego. Si no lo tienes instalado, ve a la sección de "Releases" de este repositorio de GitHub y descarga la última versión del instalador (`npcap-1.83.exe`).
+1. **Instalar Npcap:** La aplicación requiere Npcap para capturar el tráfico de red del juego. Si no lo tienes instalado, ve a la sección de "Releases" de este repositorio de GitHub y descarga la última versión del instalador (`npcap-1.83.exe`).
+2.  **Descargar el instalador:** Ve a la sección de "Releases" de este repositorio de GitHub y descarga la última versión del instalador (`BPSR Meter Setup X.X.X.exe`).
+3.  **Ejecutar el instalador:** Ejecuta el archivo `.exe` descargado y sigue las instrucciones para instalar la aplicación en tu computadora.
+
 
 ---
 
@@ -46,7 +53,7 @@ BPSR Meter es una aplicación de escritorio que funciona como un medidor de DPS 
 ### Video Tutorial
 Para una guía visual sobre cómo instalar y configurar el medidor, puedes ver el siguiente video:
 
-[![Video Tutorial de YouTube](https://img.youtube.com/vi/dCBPiaj0w8c/maxresdefault.jpg)](https://youtu.be/dCBPiaj0w8c)
+[![Video Tutorial de YouTube](PORTADA2.jpg)](https://youtu.be/QvGLjNvhKsw)
 
 ---
 
@@ -58,12 +65,20 @@ La aplicación se abrirá como una ventana superpuesta. Cuando inicies el juego,
 
 ### Controles
 
-![Controles](Controles.png)
+| ![Imagen DPS](Advanced.png) | ![Imagen DPS](DPS.png) | ![Imagen Sanador](Lite.png) |
+| :---: |:---:| :---:|
 
 - **Arrastrar:** Haz clic y arrastra el indicador de flechas para mover la ventana.
 - **Bloquear/Desbloquear:** Haz clic en el botón del candado para bloquear o desbloquear la posición de la ventana. Cuando está bloqueada, la ventana ignorará los clics del ratón.
 - **Zoom:** Utiliza los botones `+` y `-` para aumentar o disminuir el tamaño de la interfaz.
 - **Cerrar:** Haz clic en el botón `X` para cerrar la aplicación.
+- **F10:** Haz clic en `F0` para LImpiar datos.
+- **ExitLag:** Haz clic en el botón con el icono de `ExitLag` para activar compativilidad con exitlag.
+## ExitLag Mode
+En este modo se desactiva el limpiado automatico al cambiar de instancia ya que no es compatible con exitlag.
+
+ExitLag Config: ExitLag en exit lag ve a Opciones y busca (metodo de redireccion de paquetes) asegurate que este en Antiguo-NDIS
+
 
 ## Solución de problemas
 
@@ -90,13 +105,18 @@ Si la aplicación no funciona correctamente, revisa el archivo de log `iniciar_l
 > Sí, puedes ocultarlo haciendo clic en el icono de la barra de tareas.
 
 **¿Se pueden ocultar más datos?**
-> No, estoy trabajando en una versión lite que solo muestre las barras de daño más pequeñas con el nombre del jugador.
+> Sí, ahora existen los botones "Advanced" y "Lite", que te permiten cambiar entre la versión extendida y la simplificada.
+
 
 **¿Funciona con otros juegos?**
 > No. Está diseñado específicamente para decodificar los paquetes de red de este juego.
 
 **¿Funciona en el servidor chino?**
 > Sí, funciona correctamente en el servidor chino.
+
+
+**¿Hay versión para healer?**
+> Sí, al estar en modo "Lite", aparecerá a un lado un botón que permite cambiar entre la versión de DPS y la de Healer. Ahora puedes optimizar tus rotaciones y ver tu sanación por segundo (HPS) y tu contribución total.
 
 ---
 
@@ -137,9 +157,10 @@ BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Sec
 
 ## Installation
 
-1.  **Download the installer:** Go to the "Releases" section of this GitHub repository and download the latest version of the installer (`BPSR Meter Setup X.X.X.exe`).
-2.  **Run the installer:** Execute the downloaded `.exe` file and follow the instructions to install the application on your computer.
-3.  **Install Npcap:** The application requires Npcap to capture the game's network traffic. If you don't have it installed, go to the "Releases" section of this GitHub repository and download the latest version of the installer (`npcap-1.83.exe`).
+1.  **Install Npcap:** The application requires Npcap to capture the game's network traffic. If you don't have it installed, go to the "Releases" section of this GitHub repository and download the latest version of the installer (`npcap-1.83.exe`).
+2.  **Download the installer:** Go to the "Releases" section of this GitHub repository and download the latest version of the installer (`BPSR Meter Setup X.X.X.exe`).
+3.  **Run the installer:** Execute the downloaded `.exe` file and follow the instructions to install the application on your computer.
+
 
 ---
 
@@ -148,7 +169,7 @@ BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Sec
 ### Video Tutorial
 For a visual guide on how to install and set up the meter, you can watch the following video:
 
-[![YouTube Video Tutorial](https://img.youtube.com/vi/dCBPiaj0w8c/maxresdefault.jpg)](https://youtu.be/dCBPiaj0w8c)
+[![YouTube Video Tutorial](PORTADA2.jpg)](https://youtu.be/QvGLjNvhKsw)
 
 ---
 
@@ -160,12 +181,20 @@ The application will open as an overlay window. When you start the game, it will
 
 ### Controls
 
-![Controls](Controles.png)
+| ![Imagen DPS](Advanced.png) | ![Imagen DPS](DPS.png) | ![Imagen Sanador](Lite.png) |
+| :---: |:---:| :---:|
 
 - **Drag:** Click and drag the arrow indicator to move the window.
 - **Lock/Unlock:** Click the lock button to lock or unlock the window's position. When locked, the window will ignore mouse clicks.
 - **Zoom:** Use the `+` and `-` buttons to increase or decrease the interface size.
 - **Close:** Click the `X` button to close the application.
+- **ExitLag:** Click the button with the `ExitLag` icon to activate compatibility with ExitLag.
+## ExitLag Mode
+In this mode, the automatic clearing when changing instances is disabled as it is not compatible with ExitLag.
+
+**ExitLag Config:** In ExitLag, go to Options and look for (Packets redirection Method) make sure it is in Legacy-NDIS..
+
+
 
 ## Troubleshooting
 
@@ -192,13 +221,16 @@ If the application isn't working correctly, check the `iniciar_log.txt` log file
 > Yes, you can hide it by clicking its icon in the taskbar.
 
 **Can more data be hidden?**
-> Not at the moment. I'm working on a lite version that will only show smaller damage bars with player names.
+> Yes, there are now "Advanced" and "Lite" buttons that allow you to switch between the extended and simplified versions.
 
 **Does it work with other games?**
 > No. It's specifically designed to decode the network packets for this game.
 
 **Does it work on the Chinese server?**
 > Yes, it works correctly on the Chinese server.
+
+**Is there a version for healers?**
+> Yes, when in "Lite" mode, a button will appear on the side that allows you to switch between the DPS and Healer versions. You can now optimize your rotations and see your healing per second (HPS) and total contribution.
 
 ---
 

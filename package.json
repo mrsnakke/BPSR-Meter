@@ -1,6 +1,6 @@
 {
   "name": "bpsr-meter",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "BPSR Meter",
   "main": "electron-main.js",
   "bin": {
@@ -17,7 +17,10 @@
     "dist": "electron-builder --win --x64"
   },
   "keywords": [],
-  "author": "MrSnakeVT <cruz.tec.mecatronica@gmail.com>",
+  "author": "dmlgzs <https://github.com/dmlgzs/StarResonanceDamageCounter>",
+  "contributors": [
+    "MrSnakeVT <cruz.tec.mecatronica@gmail.com>"
+  ],
   "license": "AGPL-3.0",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {

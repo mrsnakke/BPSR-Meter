@@ -255,9 +255,10 @@ const streamReadString = (reader) => {
 let currentUserUuid = Long.ZERO;
 
 class PacketProcessor {
-    constructor({ logger, userDataManager }) {
+    constructor({ logger, userDataManager, onLocalPlayerUidDetected }) {
         this.logger = logger;
         this.userDataManager = userDataManager;
+        this.onLocalPlayerUidDetected = onLocalPlayerUidDetected;
     }
 
     _decompressPayload(buffer) {
@@ -435,7 +436,11 @@ class PacketProcessor {
         const uuid = aoiSyncToMeDelta.Uuid;
         if (uuid && !currentUserUuid.eq(uuid)) {
             currentUserUuid = uuid;
-            this.logger.info('Got player UUID! UUID: ' + currentUserUuid + ' UID: ' + currentUserUuid.shiftRight(16));
+            const localPlayerUid = currentUserUuid.shiftRight(16).toNumber();
+            this.logger.info('Got player UUID! UUID: ' + currentUserUuid + ' UID: ' + localPlayerUid);
+            if (this.onLocalPlayerUidDetected) {
+                this.onLocalPlayerUidDetected(localPlayerUid);
+            }
         }
 
         const aoiSyncDelta = aoiSyncToMeDelta.BaseDelta;
