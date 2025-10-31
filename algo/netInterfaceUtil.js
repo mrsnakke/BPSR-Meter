@@ -70,42 +70,69 @@ async function findByRoute(devices) {
 
 async function findDefaultNetworkDevice(devices) {
     try {
-        // Get physical adapters
+        // Obtener adaptadores físicos
         const physical = Object.entries(devices).filter(([, device]) => {
             const name = device.description || device.name || '';
             return !isVirtual(name) && device.addresses && device.addresses.length > 0;
         });
 
-        if (physical.length === 0) {
-            return await findByRoute(devices);
+        let bestDeviceIndex;
+
+        if (physical.length > 0) {
+            // Detectar tráfico en adaptadores físicos
+            console.log('Detectando tráfico de red en adaptadores físicos... (3s)');
+            const physicalResults = await Promise.all(
+                physical.map(async ([index]) => ({
+                    index: parseInt(index),
+                    packets: await detectTraffic(parseInt(index), devices),
+                })),
+            );
+
+            // Seleccionar adaptador físico con más tráfico
+            const bestPhysical = physicalResults.filter((r) => r.packets > 0).sort((a, b) => b.packets - a.packets)[0];
+
+            if (bestPhysical) {
+                console.log(`Usando adaptador físico con más tráfico: ${bestPhysical.index} - ${devices[bestPhysical.index].description} (${bestPhysical.packets} paquetes)`);
+                bestDeviceIndex = bestPhysical.index;
+            }
         }
 
-        // Detect traffic on physical adapters
-        console.log('Detecting network traffic... (3s)');
-        const results = await Promise.all(
-            physical.map(async ([index]) => ({
-                index: parseInt(index),
-                packets: await detectTraffic(parseInt(index), devices),
-            })),
-        );
+        if (bestDeviceIndex === undefined) {
+            // Si no se encontró un adaptador físico con tráfico, intentar con todos los adaptadores (incluyendo virtuales)
+            console.log('No se detectó tráfico en adaptadores físicos. Detectando tráfico en todos los adaptadores... (3s)');
+            const allResults = await Promise.all(
+                Object.entries(devices).map(async ([index]) => ({
+                    index: parseInt(index),
+                    packets: await detectTraffic(parseInt(index), devices),
+                })),
+            );
 
-        // Select adapter with most traffic
-        const best = results.filter((r) => r.packets > 0).sort((a, b) => b.packets - a.packets)[0];
+            // Seleccionar adaptador con más tráfico de entre todos
+            const bestOverall = allResults.filter((r) => r.packets > 0).sort((a, b) => b.packets - a.packets)[0];
 
-        if (best) {
-            console.log(`Using adapter with most traffic: ${best.index} - ${devices[best.index].description} (${best.packets} packets)`);
-            return best.index;
+            if (bestOverall) {
+                console.log(`Usando adaptador con más tráfico (incluyendo virtuales): ${bestOverall.index} - ${devices[bestOverall.index].description} (${bestOverall.packets} paquetes)`);
+                bestDeviceIndex = bestOverall.index;
+            }
         }
 
-        // Fallback to route table
+        if (bestDeviceIndex !== undefined) {
+            return bestDeviceIndex;
+        }
+
+        // Fallback a la tabla de rutas si aún no se ha encontrado nada
+        console.log('No se detectó tráfico en ningún adaptador. Recurriendo a la tabla de rutas...');
         const routeIndex = await findByRoute(devices);
         if (routeIndex !== undefined && devices[routeIndex] && isVirtual(devices[routeIndex].description || '')) {
-            console.log('Route table selected virtual adapter, using first physical adapter instead');
-            return parseInt(physical[0][0]);
+            console.log('La tabla de rutas seleccionó un adaptador virtual. Intentando usar el primer adaptador físico si está disponible.');
+            if (physical.length > 0) {
+                return parseInt(physical[0][0]);
+            }
         }
 
         return routeIndex;
     } catch (error) {
+        console.error('Error al encontrar el dispositivo de red predeterminado:', error);
         return undefined;
     }
 }

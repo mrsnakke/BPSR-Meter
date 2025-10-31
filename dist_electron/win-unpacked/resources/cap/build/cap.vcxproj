@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{447F07E7-095A-048C-819F-125A51A585C7}</ProjectGuid>
+    <ProjectGuid>{AA6710A2-8199-9C0F-0894-3C481FF030CE}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>cap</RootNamespace>
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
@@ -48,7 +48,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\MrSna\.electron-gyp\38.0.0\include\node;C:\Users\MrSna\.electron-gyp\38.0.0\src;C:\Users\MrSna\.electron-gyp\38.0.0\deps\openssl\config;C:\Users\MrSna\.electron-gyp\38.0.0\deps\openssl\openssl\include;C:\Users\MrSna\.electron-gyp\38.0.0\deps\uv\include;C:\Users\MrSna\.electron-gyp\38.0.0\deps\zlib;C:\Users\MrSna\.electron-gyp\38.0.0\deps\v8\include;..\..\..\..\nan@2.23.0\node_modules\nan;..\deps\winpcap\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\MrSna\.electron-gyp\38.1.0\include\node;C:\Users\MrSna\.electron-gyp\38.1.0\src;C:\Users\MrSna\.electron-gyp\38.1.0\deps\openssl\config;C:\Users\MrSna\.electron-gyp\38.1.0\deps\openssl\openssl\include;C:\Users\MrSna\.electron-gyp\38.1.0\deps\uv\include;C:\Users\MrSna\.electron-gyp\38.1.0\deps\zlib;C:\Users\MrSna\.electron-gyp\38.1.0\deps\v8\include;..\..\nan;..\deps\winpcap\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -std:c++20 /Zm2000 %(AdditionalOptions)</AdditionalOptions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -72,7 +72,7 @@
       <AdditionalOptions>/LTCG:INCREMENTAL %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <Link>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;DelayImp.lib;&quot;C:\\Users\\MrSna\\.electron-gyp\\38.0.0\\x64\\node.lib&quot;;ws2_32.lib;$(OutDir)..\..\deps\winpcap\Lib\x64\wpcap.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;DelayImp.lib;&quot;C:\\Users\\MrSna\\.electron-gyp\\38.1.0\\x64\\node.lib&quot;;ws2_32.lib;$(OutDir)..\..\deps\winpcap\Lib\x64\wpcap.lib</AdditionalDependencies>
       <AdditionalOptions>/LTCG:INCREMENTAL /ignore:4199 %(AdditionalOptions)</AdditionalOptions>
       <DelayLoadDLLs>node.exe;%(DelayLoadDLLs)</DelayLoadDLLs>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -84,13 +84,13 @@
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>C:\Users\MrSna\.electron-gyp\38.0.0\include\node;C:\Users\MrSna\.electron-gyp\38.0.0\src;C:\Users\MrSna\.electron-gyp\38.0.0\deps\openssl\config;C:\Users\MrSna\.electron-gyp\38.0.0\deps\openssl\openssl\include;C:\Users\MrSna\.electron-gyp\38.0.0\deps\uv\include;C:\Users\MrSna\.electron-gyp\38.0.0\deps\zlib;C:\Users\MrSna\.electron-gyp\38.0.0\deps\v8\include;..\..\..\..\nan@2.23.0\node_modules\nan;..\deps\winpcap\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\MrSna\.electron-gyp\38.1.0\include\node;C:\Users\MrSna\.electron-gyp\38.1.0\src;C:\Users\MrSna\.electron-gyp\38.1.0\deps\openssl\config;C:\Users\MrSna\.electron-gyp\38.1.0\deps\openssl\openssl\include;C:\Users\MrSna\.electron-gyp\38.1.0\deps\uv\include;C:\Users\MrSna\.electron-gyp\38.1.0\deps\zlib;C:\Users\MrSna\.electron-gyp\38.1.0\deps\v8\include;..\..\nan;..\deps\winpcap\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NODE_GYP_MODULE_NAME=cap;USING_UV_SHARED=1;USING_V8_SHARED=1;V8_DEPRECATION_WARNINGS=1;_GLIBCXX_USE_CXX11_ABI=1;_FILE_OFFSET_BITS=64;ELECTRON_ENSURE_CONFIG_GYPI;USING_ELECTRON_CONFIG_GYPI;V8_COMPRESS_POINTERS;V8_COMPRESS_POINTERS_IN_SHARED_CAGE;V8_31BIT_SMIS_ON_64BIT_ARCH;V8_ENABLE_SANDBOX;V8_EXTERNAL_CODE_SPACE;WIN32;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_HAS_EXCEPTIONS=0;NOMINMAX;OPENSSL_NO_PINSHARED;OPENSSL_THREADS;OPENSSL_NO_ASM;WPCAP;BUILDING_NODE_EXTENSION;HOST_BINARY=&quot;node.exe&quot;;DEBUG;_DEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\MrSna\.electron-gyp\38.0.0\include\node;C:\Users\MrSna\.electron-gyp\38.0.0\src;C:\Users\MrSna\.electron-gyp\38.0.0\deps\openssl\config;C:\Users\MrSna\.electron-gyp\38.0.0\deps\openssl\openssl\include;C:\Users\MrSna\.electron-gyp\38.0.0\deps\uv\include;C:\Users\MrSna\.electron-gyp\38.0.0\deps\zlib;C:\Users\MrSna\.electron-gyp\38.0.0\deps\v8\include;..\..\..\..\nan@2.23.0\node_modules\nan;..\deps\winpcap\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\MrSna\.electron-gyp\38.1.0\include\node;C:\Users\MrSna\.electron-gyp\38.1.0\src;C:\Users\MrSna\.electron-gyp\38.1.0\deps\openssl\config;C:\Users\MrSna\.electron-gyp\38.1.0\deps\openssl\openssl\include;C:\Users\MrSna\.electron-gyp\38.1.0\deps\uv\include;C:\Users\MrSna\.electron-gyp\38.1.0\deps\zlib;C:\Users\MrSna\.electron-gyp\38.1.0\deps\v8\include;..\..\nan;..\deps\winpcap\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -std:c++20 /Zm2000 %(AdditionalOptions)</AdditionalOptions>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -117,7 +117,7 @@
       <AdditionalOptions>/LTCG:INCREMENTAL %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <Link>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;DelayImp.lib;&quot;C:\\Users\\MrSna\\.electron-gyp\\38.0.0\\x64\\node.lib&quot;;ws2_32.lib;$(OutDir)..\..\deps\winpcap\Lib\x64\wpcap.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;DelayImp.lib;&quot;C:\\Users\\MrSna\\.electron-gyp\\38.1.0\\x64\\node.lib&quot;;ws2_32.lib;$(OutDir)..\..\deps\winpcap\Lib\x64\wpcap.lib</AdditionalDependencies>
       <AdditionalOptions>/LTCG:INCREMENTAL /ignore:4199 %(AdditionalOptions)</AdditionalOptions>
       <DelayLoadDLLs>node.exe;%(DelayLoadDLLs)</DelayLoadDLLs>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -129,7 +129,7 @@
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>C:\Users\MrSna\.electron-gyp\38.0.0\include\node;C:\Users\MrSna\.electron-gyp\38.0.0\src;C:\Users\MrSna\.electron-gyp\38.0.0\deps\openssl\config;C:\Users\MrSna\.electron-gyp\38.0.0\deps\openssl\openssl\include;C:\Users\MrSna\.electron-gyp\38.0.0\deps\uv\include;C:\Users\MrSna\.electron-gyp\38.0.0\deps\zlib;C:\Users\MrSna\.electron-gyp\38.0.0\deps\v8\include;..\..\..\..\nan@2.23.0\node_modules\nan;..\deps\winpcap\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\MrSna\.electron-gyp\38.1.0\include\node;C:\Users\MrSna\.electron-gyp\38.1.0\src;C:\Users\MrSna\.electron-gyp\38.1.0\deps\openssl\config;C:\Users\MrSna\.electron-gyp\38.1.0\deps\openssl\openssl\include;C:\Users\MrSna\.electron-gyp\38.1.0\deps\uv\include;C:\Users\MrSna\.electron-gyp\38.1.0\deps\zlib;C:\Users\MrSna\.electron-gyp\38.1.0\deps\v8\include;..\..\nan;..\deps\winpcap\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NODE_GYP_MODULE_NAME=cap;USING_UV_SHARED=1;USING_V8_SHARED=1;V8_DEPRECATION_WARNINGS=1;_GLIBCXX_USE_CXX11_ABI=1;_FILE_OFFSET_BITS=64;ELECTRON_ENSURE_CONFIG_GYPI;USING_ELECTRON_CONFIG_GYPI;V8_COMPRESS_POINTERS;V8_COMPRESS_POINTERS_IN_SHARED_CAGE;V8_31BIT_SMIS_ON_64BIT_ARCH;V8_ENABLE_SANDBOX;V8_EXTERNAL_CODE_SPACE;WIN32;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_HAS_EXCEPTIONS=0;NOMINMAX;OPENSSL_NO_PINSHARED;OPENSSL_THREADS;OPENSSL_NO_ASM;WPCAP;BUILDING_NODE_EXTENSION;HOST_BINARY=&quot;node.exe&quot;;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
@@ -140,7 +140,7 @@
     <ClCompile Include="..\src\binding.cc">
       <ObjectFileName>$(IntDir)\src\binding.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="F:\DPS-METER-by-MrSnake\BPSR-Meter-master\node_modules\.pnpm\@electron+node-gyp@https+++_00edca533b603d6dc5ad01ce0c26cce3\node_modules\@electron\node-gyp\src\win_delay_load_hook.cc"/>
+    <ClCompile Include="F:\DPS-METER-by-MrSnake\BPSR-Meter-master2.1.8\BPSR-Meter-master\node_modules\@electron\node-gyp\src\win_delay_load_hook.cc"/>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>
   <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets"/>

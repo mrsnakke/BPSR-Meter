@@ -24,8 +24,8 @@ const skillConfig = require('./tables/skill_names.json').skill_names;
 const VERSION = '3.1';
 const SETTINGS_PATH = path.join('./settings.json');
 let globalSettings = {
-    autoClearOnServerChange: true,
-    autoClearOnTimeout: false,
+    autoClearOnServerChange: true, // Limpiar datos al cambiar de canal/servidor
+    autoClearOnTimeout: true, // Revertido a true, para que los datos se limpien después de un tiempo
     onlyRecordEliteDummy: false,
     enableFightLog: false, // Nueva configuración para logs de combate (deshabilitado por defecto)
     enableDpsLog: false,   // Nueva configuración para logs de DPS (deshabilitado por defecto)
@@ -1001,6 +1001,11 @@ async function main() {
     if (num === undefined || !devices[num]) {
         logger.error('No se pudo detectar automáticamente una interfaz de red válida.');
         logger.error('Asegúrate de que el juego se esté ejecutando e inténtalo de nuevo.');
+        logger.info('\nInterfaces de red disponibles:');
+        devices.forEach((device, i) => {
+            logger.info(`  ${i}: ${device.name} - ${device.description || 'N/A'}`);
+        });
+        logger.info('\nPor favor, intenta iniciar el programa con un número de interfaz específico, por ejemplo: node server.js [puerto] [numero_interfaz]');
         await new Promise(resolve => setTimeout(resolve, 10000)); // Esperar 10 segundos para que el usuario lea el mensaje
         process.exit(1);
     }
@@ -1030,7 +1035,7 @@ async function main() {
         if (!isPaused) {
             userDataManager.updateAllRealtimeDps();
         }
-    }, 100);
+    }, 50);
 
     // Si el puerto no fue pasado como argumento, se usará el predeterminado 8989
     if (server_port === undefined || server_port === null) {
@@ -1309,6 +1314,14 @@ async function main() {
         res.json({ code: 0, data: globalSettings });
     });
 
+    // Nueva API para alternar autoClearOnServerChange
+    app.post('/api/toggle-clear-on-server-change', async (req, res) => {
+        const { value } = req.body;
+        globalSettings.autoClearOnServerChange = value;
+        await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 2), 'utf8');
+        res.json({ code: 0, data: globalSettings.autoClearOnServerChange });
+    });
+
     // Ruta para servir el diccionario
     app.get('/api/diccionario', async (req, res) => {
         const diccionarioPath = path.join(__dirname, 'diccionario.json');
@@ -1394,7 +1407,7 @@ async function main() {
             };
             io.emit('data', data);
         }
-    }, 100);
+    }, 50);
 
     server.listen(server_port, '0.0.0.0', () => {
         // Abrir automáticamente la página web en el navegador predeterminado (compatible con múltiples plataformas)
@@ -1424,7 +1437,7 @@ async function main() {
     };
 
     const fragmentIpCache = new Map();
-    const FRAGMENT_TIMEOUT = 30000;
+    const FRAGMENT_TIMEOUT = 30000; // Revertido a 30 segundos
     const getTCPPacket = (frameBuffer, ethOffset) => {
         const ipPacket = decoders.IPV4(frameBuffer, ethOffset);
         const ipId = ipPacket.info.id;
