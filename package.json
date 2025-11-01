@@ -75,7 +75,8 @@
       "icon.png",
       "medidor.png",
       "portada.png",
-      "public/ExitLag.png"
+      "public/ExitLag.png",
+      "public/icons/**/*"
     ],
     "extraResources": [
       {

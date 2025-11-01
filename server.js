@@ -326,10 +326,10 @@ class UserData {
         this.healingStats = new StatisticData(this, '治疗');
         this.takenDamage = 0;
         this.deadCount = 0;
-        this.profession = '未知';
+        this.mainProfession = '未知'; // Nueva propiedad para la profesión principal
+        this.subProfession = '';
         this.skillUsage = new Map();
         this.fightPoint = 0;
-        this.subProfession = '';
         this.attr = {};
     }
 
@@ -424,7 +424,7 @@ class UserData {
             total_hps: this.getTotalHps(),
             total_healing: { ...this.healingStats.stats },
             taken_damage: this.takenDamage,
-            profession: this.profession + (this.subProfession ? `-${this.subProfession}` : ''),
+            profession: this.mainProfession + (this.subProfession ? `-${this.subProfession}` : ''),
             name: this.name,
             fightPoint: this.fightPoint,
             hp: this.attr.hp,
@@ -461,19 +461,25 @@ class UserData {
         return skills;
     }
 
-    /** 设置职业
-     * @param {string} profession - 职业名称
+    /** Establecer profesión principal
+     * @param {string} mainProfession - Nombre de la profesión principal
      * */
-    setProfession(profession) {
-        if (profession !== this.profession) this.setSubProfession('');
-        this.profession = profession;
+    setMainProfession(mainProfession) {
+        if (mainProfession !== this.mainProfession) {
+            this.mainProfession = mainProfession;
+            // Si la profesión principal cambia, la subprofesión debe resetearse
+            this.subProfession = '';
+        }
     }
 
-    /** 设置子职业
-     * @param {string} subProfession - 子职业名称
+    /** Establecer subprofesión
+     * @param {string} subProfession - Nombre de la subprofesión
      * */
     setSubProfession(subProfession) {
-        this.subProfession = subProfession;
+        // Solo actualiza si la nueva subprofesión es diferente y no está vacía
+        if (subProfession && subProfession !== this.subProfession) {
+            this.subProfession = subProfession;
+        }
     }
 
     /** 设置姓名
@@ -639,7 +645,12 @@ class UserDataManager {
                 if (cachedData.name) {
                     user.setName(cachedData.name);
                 }
-                // Ya no se carga la profesión desde el caché de usuario
+                if (cachedData.mainProfession) {
+                    user.setMainProfession(cachedData.mainProfession);
+                }
+                if (cachedData.subProfession) {
+                    user.setSubProfession(cachedData.subProfession);
+                }
                 if (cachedData.fightPoint !== undefined && cachedData.fightPoint !== null) {
                     user.setFightPoint(cachedData.fightPoint);
                 }
@@ -736,21 +747,23 @@ class UserDataManager {
         this.logLock.release();
     }
 
-    /** Establecer profesión de usuario
+    /** Establecer profesión principal de usuario
      * @param {number} uid - ID de usuario
-     * @param {string} profession - Nombre de la profesión
+     * @param {string} mainProfession - Nombre de la profesión principal
      * */
-    setProfession(uid, profession) {
+    setMainProfession(uid, mainProfession) {
         const user = this.getUser(uid);
-        if (user.profession !== profession) {
-            user.setProfession(profession);
-            this.logger.info(`Found profession ${profession} for uid ${uid}`);
+        if (user.mainProfession !== mainProfession) {
+            user.setMainProfession(mainProfession);
+            this.logger.info(`Found main profession ${mainProfession} for uid ${uid}`);
 
             // Actualizar caché
             const uidStr = String(uid);
             if (!this.userCache.has(uidStr)) {
                 this.userCache.set(uidStr, {});
             }
+            this.userCache.get(uidStr).mainProfession = user.mainProfession;
+            this.userCache.get(uidStr).subProfession = user.subProfession;
             this.saveUserCacheThrottled();
         }
     }
