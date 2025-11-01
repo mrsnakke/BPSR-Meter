@@ -1,8 +1,8 @@
 version: 2.6.0
 files:
   - url: BPSR-Meter-Setup-2.6.0.exe
-    sha512: BNS5bjSV2qcDt9cI0D3qYf2VwyrINlm5xahO962H5A0i+8PKmizK+15IxPW4eu1Um5iC+bFNiZWX18rBSF/hdw==
-    size: 119134686
+    sha512: 1a9JmKqjsrLWN/ZOhIxUbzGY2Gqplz2TQeVp+bnTDe3Z1J+7Zj08lm4EOVUku9fI7kN/jF4SHwSpSi0CVdb9mw==
+    size: 119154958
 path: BPSR-Meter-Setup-2.6.0.exe
-sha512: BNS5bjSV2qcDt9cI0D3qYf2VwyrINlm5xahO962H5A0i+8PKmizK+15IxPW4eu1Um5iC+bFNiZWX18rBSF/hdw==
-releaseDate: '2025-10-31T15:13:15.619Z'
+sha512: 1a9JmKqjsrLWN/ZOhIxUbzGY2Gqplz2TQeVp+bnTDe3Z1J+7Zj08lm4EOVUku9fI7kN/jF4SHwSpSi0CVdb9mw==
+releaseDate: '2025-11-01T11:02:49.065Z'

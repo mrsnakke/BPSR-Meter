@@ -20,6 +20,7 @@ files:
       - medidor.png
       - portada.png
       - public/ExitLag.png
+      - public/icons/**/*
 extraResources:
   - from: node_modules/cap/
     to: cap/
@@ -34,4 +35,4 @@ win:
 nsis:
   include: extra.nsh
   deleteAppDataOnUninstall: true
-electronVersion: 38.1.0
+electronVersion: 38.0.0

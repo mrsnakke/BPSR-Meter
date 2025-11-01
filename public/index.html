@@ -756,35 +756,35 @@ let liteModeType = 'dps'; // 'dps' o 'healer'
 let localPlayerUid = null; // ID del jugador local
 const professionMap = {
     // Clases Principales
-    '雷影剑士': { name: 'Stormblade', icon: 'class_stormblade_resultado.png', role: 'dps' },
+    '雷影剑士': { name: 'Stormblade', icon: 'Stormblade.png', role: 'dps' },
     '冰魔导师': { name: 'Frost Mage', icon: 'Frost Mage.png', role: 'dps' },
-    '涤罪恶火·战斧': { name: 'Fire Axe', icon: 'Fire Axe.png', role: 'dps' },
+    '涤罪恶火·战斧': { name: 'Heavy Guardian', icon: 'Heavy Guardian.png', role: 'dps' },
     '青岚骑士': { name: 'Wind Knight', icon: 'Wind Knight.png', role: 'dps' },
-    '森语者': { name: 'Verdant Oracle', icon: 'Verdant Oracle', role: 'healer' },
+    '森语者': { name: 'Verdant Oracle', icon: 'Verdant Oracle.png', role: 'healer' },
     '雷霆一闪·手炮': { name: 'Gunner', icon: 'desconocido.png', role: 'dps' },
-    '巨刃守护者': { name: 'Heavy Guardian', icon: 'baluarte_ferreo.png', role: 'tank' },
+    '巨刃守护者': { name: 'Heavy Guardian', icon: 'Heavy Guardian.png', role: 'tank' },
     '暗灵祈舞·仪刀/仪仗': { name: 'Spirit Dancer', icon: 'desconocido.png', role: 'dps' },
     '神射手': { name: 'Marksman', icon: 'arco_halcon.png', role: 'dps' },
-    '神盾骑士': { name: 'Shield Knight', icon: 'guardian.png', role: 'tank' },
-    '灵魂乐手': { name: 'Beat Performer', icon: 'Concierto.png', role: 'healer' },
+    '神盾骑士': { name: 'Shield Knight', icon: 'Shield Knight.png', role: 'tank' },
+    '灵魂乐手': { name: 'Beat Performer', icon: 'Beat Performer.png', role: 'healer' },
 
     // Especializaciones
-    '居合': { name: 'laido Slash', icon: 'Stormblade.png', role: 'dps' }, // IDs originales: 1714 ("居合斩""Iaido Slash"), 1734 ("雷霆居合斩")
+    '居合': { name: 'laido Slash', icon: 'Iaido Slash.png', role: 'dps' }, // IDs originales: 1714 ("居合斩""Iaido Slash"), 1734 ("雷霆居合斩")
     '月刃': { name: 'MoonStrike', icon: 'MoonStrike.png', role: 'dps' }, // IDs originales: 44701 ("月刃"Moonstrike), 179906 ("月刃回旋")
-    '冰矛': { name: 'Icicle', icon: 'lanza_hielo.png', role: 'dps' }, // IDs originales: 120901 ("贯穿冰矛"), 120902 ("冰矛")
-    '射线': { name: 'Frostbeam', icon: 'Frost Mage.png', role: 'dps' }, // IDs originales: 1241 ("寒冰射线"Frostbeam)
-    '防盾': { name: 'Recovery', icon: 'guardian.png', role: 'tank' }, // IDs originales: 2405 ("英勇盾击 Valor Bash")
-    '光盾': { name: 'Shield', icon: 'egida_luz.png', role: 'tank' }, // IDs originales: 2406 ("先锋打击/先锋追击")
-    '格挡': { name: 'Block', icon: 'Fire Axe.png', role: 'tank' }, // IDs originales: 1930 ("格挡冲击"), 1931 ("格挡冲击"), 1934 ("格挡冲击"), 1935 ("格挡冲击-怒击")
-    '岩盾': { name: 'Earthfort', icon: 'baluarte_ferreo.png', role: 'tank' }, // IDs originales: 1922 ("护盾猛击")
-    '惩戒': { name: 'Smite', icon: 'castigo.png', role: 'healer' }, // IDs originales: 1518 ("狂野绽放"Wild Bloom), 1541 ("狂野绽放"), 21402 ("狂野绽放")
-    '愈合': { name: 'Lifebind', icon: 'Verdant Oracle', role: 'healer' }, // IDs originales: 20301 ("生命绽放Life Bloom")
+    '冰矛': { name: 'Icicle', icon: 'Icicle.png', role: 'dps' }, // IDs originales: 120901 ("贯穿冰矛"), 120902 ("冰矛")
+    '射线': { name: 'Frostbeam', icon: 'Frostbeam.png', role: 'dps' }, // IDs originales: 1241 ("寒冰射线"Frostbeam)
+    '防盾': { name: 'Recovery', icon: 'Recovery.png', role: 'tank' }, // IDs originales: 2405 ("英勇盾击 Valor Bash")
+    '光盾': { name: 'Shield', icon: 'Shield.png', role: 'tank' }, // IDs originales: 2406 ("先锋打击/先锋追击")
+    '格挡': { name: 'Block', icon: 'Block.png', role: 'tank' }, // IDs originales: 1930 ("格挡冲击"), 1931 ("格挡冲击"), 1934 ("格挡冲击"), 1935 ("格挡冲击-怒击")
+    '岩盾': { name: 'Earthfort', icon: 'Earthfort.png', role: 'tank' }, // IDs originales: 1922 ("护盾猛击")
+    '惩戒': { name: 'Smite', icon: 'Smite.png', role: 'healer' }, // IDs originales: 1518 ("狂野绽放"Wild Bloom), 1541 ("狂野绽放"), 21402 ("狂野绽放")
+    '愈合': { name: 'Lifebind', icon: 'Lifebind.png', role: 'healer' }, // IDs originales: 20301 ("生命绽放Life Bloom")
     '狼弓': { name: 'Wildpack', icon: 'arco_lobo.png', role: 'dps' }, // IDs originales: 2292 ("幻影魔狼-扑咬"), 1700820 ("狼协同攻击"), 1700825 ("狼突击"), 1700827 ("狼普攻")
     '鹰弓': { name: 'Falconry', icon: 'arco_halcon.png', role: 'dps' }, // IDs originales: 220112 ("光能裂隙"), 2203622 ("光棱溅射")
-    '协奏': { name: 'Concerto', icon: 'Concierto.png', role: 'healer' }, // IDs originales: 2307 ("愈合节拍"Healing Beat), 2361 ("愈合节拍copy"), 55302 ("愈合节拍")
-    '狂音': { name: 'Dissonance', icon: 'Concierto.png', role: 'healer' }, // IDs originales: 2306 ("增幅节拍")
-    '空枪': { name: 'Skyward', icon: 'francotirador.png', role: 'dps' }, // IDs originales: 1419 ("翔返"Skyfall)
-    '重装': { name: 'Vanguard', icon: 'Wind Knight.png', role: 'dps' }, // IDs originales: 1405 ("疾风刺"Gale Thrust), 1418 ("疾风刺")
+    '协奏': { name: 'Concerto', icon: 'Concerto.png', role: 'healer' }, // IDs originales: 2307 ("愈合节拍"Healing Beat), 2361 ("愈合节拍copy"), 55302 ("愈合节拍")
+    '狂音': { name: 'Dissonance', icon: 'Dissonance.png', role: 'healer' }, // IDs originales: 2306 ("增幅节拍")
+    '空枪': { name: 'Skyward', icon: 'Skyward.png', role: 'dps' }, // IDs originales: 1419 ("翔返"Skyfall)
+    '重装': { name: 'Vanguard', icon: 'Vanguard.png', role: 'dps' }, // IDs originales: 1405 ("疾风刺"Gale Thrust), 1418 ("疾风刺")
 
 };
 
@@ -948,15 +948,13 @@ const professionMap = {
             });
         }
 
-        // Manejador de eventos para la tecla F10
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'F10') {
-                resetDpsMeter();
-            }
+    // Manejar el evento de limpiar datos DPS desde el proceso principal
+    if (window.electronAPI) {
+        window.electronAPI.onClearDpsData(() => {
+            resetDpsMeter();
         });
-    });
-
-    function applyZoom() {
+    }
+});    function applyZoom() {
         if (playerBarsContainer) {
             playerBarsContainer.style.transform = `scale(${currentZoom})`;
             playerBarsContainer.style.transformOrigin = 'top left';
