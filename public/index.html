@@ -741,11 +741,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             </button>
             <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
         </header>
+        <!-- Controles de paginación -->
+        <div id="pagination-controls" style="display:flex; justify-content:center; align-items:center; gap:10px; margin:48px 0 8px 0; padding:6px; flex-wrap:wrap; background:rgba(0,0,0,0.2); border-radius:8px;">
+            <button class="control-button" id="prev-page-button" title="Página anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <span id="page-info" style="color:#fff; font-size:0.9rem; min-width:100px; text-align:center;">Página 1 de 1</span>
+            <button class="control-button" id="next-page-button" title="Página siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+            <select id="players-per-page-select" style="background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 8px; font-size:0.9rem;">
+                <option value="5" selected>5 por página</option>
+                <option value="10">10 por página</option>
+                <option value="15">15 por página</option>
+                <option value="20">20 por página</option>
+                <option value="30">30 por página</option>
+                <option value="50">50 por página</option>
+            </select>
+        </div>
         <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
             <div id="dps-timer" style="text-align:center;font-size:1.2rem;font-weight:700;margin-top:4px;min-height:28px;color:#e0e0e0;display:none; text-shadow: var(--text-shadow);"></div>
+            <!-- DPS Total Combinado -->
+            <div id="total-dps-display" style="text-align:center;font-size:1rem;font-weight:600;color:#4fc3f7;display:none;text-shadow: 0 2px 4px rgba(0,0,0,0.5);padding:4px 0;">
+                <span style="color:#90caf9;">DPS Total:</span> <span id="total-dps-value">0</span> | 
+                <span style="color:#90caf9;">Daño Total:</span> <span id="total-damage-value">0</span>
+            </div>
             <div id="logs-section" style="margin-top:8px;"></div>
         </div>
-        <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1);"><div id="message-display">Esperando datos...</div></main>
+        <main id="player-bars-container" style="margin-top: 8px; border: 1px solid rgba(255, 255, 255, 0.1);"><div id="message-display">Esperando datos...</div></main>
     </div>
 
 <script>
@@ -801,6 +820,11 @@ const professionMap = {
     let logPreviewTimeout; // Declarar logPreviewTimeout aquí
     let lastNumPlayers = 0; // Para controlar el redimensionamiento por número de jugadores
     let autoClearOnServerChange = true; // Estado para la configuración (true = limpieza automática activa)
+    
+    // Paginación
+    let currentPage = 1;
+    let playersPerPage = 5;
+    let totalPlayers = 0;
 
     const dpsTimerDiv = document.getElementById('dps-timer');
     const playerBarsContainer = document.getElementById('player-bars-container');
@@ -833,18 +857,30 @@ const professionMap = {
             });
         }
 
+        // Cargar configuración inicial del servidor
+        try {
+            const response = await fetch('/api/settings');
+            const settings = await response.json();
+            autoClearOnServerChange = settings.data.autoClearOnServerChange;
+            
+            // Configuración de paginación
+            if (settings.data.playersPerPage) {
+                playersPerPage = settings.data.playersPerPage;
+                const playersPerPageSelect = document.getElementById('players-per-page-select');
+                if (playersPerPageSelect) {
+                    playersPerPageSelect.value = playersPerPage;
+                }
+            }
+            
+            console.log('Configuración inicial cargada:', settings.data);
+        } catch (error) {
+            console.error('Error al obtener la configuración inicial:', error);
+        }
+
         // Lógica para el nuevo botón ExitLag
         if (exitLagButton) {
-            // Obtener el estado inicial del servidor
-            try {
-                const response = await fetch('/api/settings');
-                const settings = await response.json();
-                autoClearOnServerChange = settings.data.autoClearOnServerChange;
-                // El botón está activo (contorno verde) cuando autoClearOnServerChange es false
-                exitLagButton.classList.toggle('active', !autoClearOnServerChange);
-            } catch (error) {
-                console.error('Error al obtener la configuración inicial de ExitLag:', error);
-            }
+            // El botón está activo (contorno verde) cuando autoClearOnServerChange es false
+            exitLagButton.classList.toggle('active', !autoClearOnServerChange)
 
             exitLagButton.addEventListener('click', async () => { // Añadir async aquí
                 autoClearOnServerChange = !autoClearOnServerChange; // Alternar el estado
@@ -944,6 +980,48 @@ const professionMap = {
             closeButton.addEventListener('click', () => {
                 if (window.electronAPI) {
                     window.electronAPI.closeWindow();
+                }
+            });
+        }
+
+        // Botones de paginación
+        const prevPageButton = document.getElementById('prev-page-button');
+        const nextPageButton = document.getElementById('next-page-button');
+        const playersPerPageSelect = document.getElementById('players-per-page-select');
+        
+        if (prevPageButton) {
+            prevPageButton.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    fetchDataAndRender();
+                }
+            });
+        }
+        
+        if (nextPageButton) {
+            nextPageButton.addEventListener('click', () => {
+                const totalPages = Math.ceil(totalPlayers / playersPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    fetchDataAndRender();
+                }
+            });
+        }
+        
+        if (playersPerPageSelect) {
+            playersPerPageSelect.addEventListener('change', async (e) => {
+                playersPerPage = parseInt(e.target.value);
+                currentPage = 1; // Resetear a primera página
+                
+                try {
+                    await fetch('/api/set-players-per-page', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ playersPerPage })
+                    });
+                    fetchDataAndRender();
+                } catch (error) {
+                    console.error('Error al actualizar jugadores por página:', error);
                 }
             });
         }
@@ -1179,18 +1257,52 @@ const professionMap = {
             const userData = await dataRes.json();
             const diccionarioData = await diccRes.json();
             const currentGlobalSettings = await settingsRes.json();
+            
+            // Actualizar localPlayerUid desde el servidor
+            if (userData.localPlayerUid !== undefined && userData.localPlayerUid !== null) {
+                localPlayerUid = userData.localPlayerUid;
+            }
 
             if (!userData.user || Object.keys(userData.user).length === 0) {
                 container.innerHTML = '<div id="message-display">Esperando datos...</div>';
                 updateSyncButtonState();
+                
+                // Inicializar controles de paginación incluso sin datos
+                const paginationControls = document.getElementById('pagination-controls');
+                if (paginationControls) {
+                    paginationControls.style.display = 'flex';
+                    const pageInfo = document.getElementById('page-info');
+                    if (pageInfo) pageInfo.textContent = 'Página 1 de 1';
+                    const prevButton = document.getElementById('prev-page-button');
+                    const nextButton = document.getElementById('next-page-button');
+                    if (prevButton) prevButton.disabled = true;
+                    if (nextButton) nextButton.disabled = true;
+                }
                 return;
             }
 
             let userArray = Object.values(userData.user);
+            
             userArray = userArray.filter(u => u.total_damage && u.total_damage.total > 0);
             if (userArray.length === 0) {
                 container.innerHTML = '<div id="message-display">Esperando datos...</div>';
                 updateSyncButtonState();
+                
+                // Ocultar display de DPS total
+                const totalDpsDisplay = document.getElementById('total-dps-display');
+                if (totalDpsDisplay) totalDpsDisplay.style.display = 'none';
+                
+                // Inicializar controles de paginación incluso sin datos
+                const paginationControls = document.getElementById('pagination-controls');
+                if (paginationControls) {
+                    paginationControls.style.display = 'flex';
+                    const pageInfo = document.getElementById('page-info');
+                    if (pageInfo) pageInfo.textContent = 'Página 1 de 1';
+                    const prevButton = document.getElementById('prev-page-button');
+                    const nextButton = document.getElementById('next-page-button');
+                    if (prevButton) prevButton.disabled = true;
+                    if (nextButton) nextButton.disabled = true;
+                }
                 return;
             }
 
@@ -1233,9 +1345,47 @@ const professionMap = {
                 userArray.sort((a, b) => (b.total_damage && b.total_damage.total ? Number(b.total_damage.total) : 0) - (a.total_damage && a.total_damage.total ? Number(a.total_damage.total) : 0));
             }
             
-            userArray = userArray.slice(0, 20);
+            // Paginación
+            totalPlayers = userArray.length;
+            const totalPages = Math.ceil(totalPlayers / playersPerPage);
+            currentPage = Math.min(currentPage, Math.max(1, totalPages)); // Asegurar que currentPage esté en rango válido
+            const startIndex = (currentPage - 1) * playersPerPage;
+            const endIndex = startIndex + playersPerPage;
+            const paginatedUsers = userArray.slice(startIndex, endIndex);
+            
+            // Actualizar controles de paginación
+            const paginationControls = document.getElementById('pagination-controls');
+            const pageInfo = document.getElementById('page-info');
+            const prevButton = document.getElementById('prev-page-button');
+            const nextButton = document.getElementById('next-page-button');
+            
+            // Mostrar controles de paginación siempre
+            if (paginationControls) {
+                paginationControls.style.display = 'flex';
+                if (pageInfo) pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+                if (prevButton) prevButton.disabled = (currentPage === 1);
+                if (nextButton) nextButton.disabled = (currentPage === totalPages);
+            }
 
-            const currentNumPlayers = userArray.length;
+            // Calcular DPS total y daño total de TODOS los jugadores (antes de paginar)
+            const totalDPSCombined = userArray.reduce((acc, u) => acc + (u.total_dps || 0), 0);
+            const totalDamageCombined = userArray.reduce((acc, u) => acc + (u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0), 0);
+            
+            // Actualizar display de totales
+            const totalDpsDisplay = document.getElementById('total-dps-display');
+            const totalDpsValue = document.getElementById('total-dps-value');
+            const totalDamageValue = document.getElementById('total-damage-value');
+            
+            if (totalDpsDisplay && totalDPSCombined > 0) {
+                totalDpsDisplay.style.display = 'block';
+                if (totalDpsValue) totalDpsValue.textContent = formatStat(Math.round(totalDPSCombined));
+                if (totalDamageValue) totalDamageValue.textContent = formatStat(totalDamageCombined);
+            } else if (totalDpsDisplay) {
+                totalDpsDisplay.style.display = 'none';
+            }
+
+            const currentNumPlayers = paginatedUsers.length;
+            userArray = paginatedUsers; // Usar datos paginados para renderizar
             if (currentNumPlayers !== lastNumPlayers) {
                 lastNumPlayers = currentNumPlayers;
                 updateWindowSize();

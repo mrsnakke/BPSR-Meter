@@ -1,5 +1,6 @@
 {
     "autoClearOnServerChange": true,
     "autoClearOnTimeout": true,
-    "onlyRecordEliteDummy": false
+    "onlyRecordEliteDummy": false,
+    "playersPerPage": 5
 }

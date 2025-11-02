@@ -43,6 +43,7 @@ const SETTINGS_PATH = path.join('./settings.json');
 
 // Función para enviar el UID del jugador local al proceso principal de Electron
 function sendLocalPlayerUidToMain(uid) {
+    currentLocalPlayerUid = uid; // Guardar el UID localmente
     if (process.send) {
         process.send({ type: 'local-player-uid', uid: uid });
     }
@@ -55,9 +56,11 @@ let globalSettings = {
     enableFightLog: false, // Nueva configuración para logs de combate (deshabilitado por defecto)
     enableDpsLog: false,   // Nueva configuración para logs de DPS (deshabilitado por defecto)
     enableHistorySave: false, // Nueva configuración para guardar el historial de datos de usuario (deshabilitado por defecto)
+    playersPerPage: 5, // Número de jugadores por página
 };
 
 let server_port; // Declarar server_port aquí para que sea accesible globalmente
+let currentLocalPlayerUid = null; // UID del jugador local
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -1112,6 +1115,7 @@ async function main() {
         const data = {
             code: 0,
             user: userData,
+            localPlayerUid: currentLocalPlayerUid, // Incluir el UID del jugador local
         };
         res.json(data);
     });
@@ -1365,6 +1369,25 @@ async function main() {
         globalSettings.autoClearOnServerChange = value;
         await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 2), 'utf8');
         res.json({ code: 0, data: globalSettings.autoClearOnServerChange });
+    });
+
+    // API para configurar jugadores por página
+    app.post('/api/set-players-per-page', async (req, res) => {
+        const { playersPerPage } = req.body;
+        if (playersPerPage && playersPerPage > 0 && playersPerPage <= 50) {
+            globalSettings.playersPerPage = playersPerPage;
+            await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 2), 'utf8');
+            res.json({
+                code: 0,
+                msg: `Jugadores por página actualizado a ${playersPerPage}`,
+                playersPerPage: globalSettings.playersPerPage,
+            });
+        } else {
+            res.status(400).json({
+                code: 1,
+                msg: 'El número de jugadores por página debe estar entre 1 y 50',
+            });
+        }
     });
 
     // Ruta para servir el diccionario
