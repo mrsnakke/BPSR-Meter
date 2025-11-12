@@ -1,5 +1,6 @@
-<div align="center">
-  <img src="portada.png" alt="Portada" width="800"/>
+
+<img width="1434" height="435" alt="image" src="https://github.com/user-attachments/assets/3e485411-6b1e-4bfc-be20-7fbdd941ce1c" />
+
 </div>
 
 # Agradecimientos y Créditos
@@ -18,7 +19,8 @@ Este proyecto, **BPSR Meter**, es una versión modificada y personalizada del ex
 
 BPSR Meter es una aplicación de escritorio que funciona como un medidor de DPS (Daño Por Segundo) en tiempo real para el juego. Se superpone a la ventana del juego para proporcionar estadísticas de combate detalladas sin interrumpir la jugabilidad.
 
-![Medidor DPS en acción](medidor.png)
+<img width="660" height="88" alt="image" src="https://github.com/user-attachments/assets/421c1f3e-5017-493f-8acb-48a5579380f6" />
+
 
 ## Características
 
@@ -53,7 +55,7 @@ BPSR Meter es una aplicación de escritorio que funciona como un medidor de DPS 
 ### Video Tutorial
 Para una guía visual sobre cómo instalar y configurar el medidor, puedes ver el siguiente video:
 
-[![Video Tutorial de YouTube](PORTADA2.jpg)](https://youtu.be/QvGLjNvhKsw)
+[![Video Tutorial de YouTube](https://github.com/mrsnakke/BPSR-Meter/blob/master/PORTADA2.jpg?raw=true)](https://youtu.be/QvGLjNvhKsw)  
 
 ---
 
@@ -65,7 +67,7 @@ La aplicación se abrirá como una ventana superpuesta. Cuando inicies el juego,
 
 ### Controles
 
-| ![Imagen DPS](Advanced.png) | ![Imagen DPS](DPS.png) | ![Imagen Sanador](Lite.png) |
+| ![Imagen DPS](https://github.com/user-attachments/assets/c04abbd5-a97e-4c5b-b0ef-7568a2af978e) | ![Imagen DPS](https://github.com/user-attachments/assets/48a87961-de37-45c2-b496-6e41e024c0f0) | ![Imagen DPS](https://github.com/user-attachments/assets/364f194b-e553-4545-b96d-58c12154a1a8) |
 | :---: |:---:| :---:|
 
 - **Arrastrar:** Haz clic y arrastra el indicador de flechas para mover la ventana.
@@ -134,7 +136,7 @@ Si la aplicación no funciona correctamente, revisa el archivo de log `iniciar_l
 
 BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Second) meter for the game. It overlays the game window to provide detailed combat statistics without interrupting your gameplay.
 
-![DPS Meter in action](medidor.png)
+<img width="660" height="88" alt="image" src="https://github.com/user-attachments/assets/421c1f3e-5017-493f-8acb-48a5579380f6" />
 
 ## Features
 
@@ -169,7 +171,7 @@ BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Sec
 ### Video Tutorial
 For a visual guide on how to install and set up the meter, you can watch the following video:
 
-[![YouTube Video Tutorial](PORTADA2.jpg)](https://youtu.be/QvGLjNvhKsw)
+[![Video Tutorial de YouTube](https://github.com/mrsnakke/BPSR-Meter/blob/master/PORTADA2.jpg?raw=true)](https://youtu.be/QvGLjNvhKsw) 
 
 ---
 
@@ -181,7 +183,7 @@ The application will open as an overlay window. When you start the game, it will
 
 ### Controls
 
-| ![Imagen DPS](Advanced.png) | ![Imagen DPS](DPS.png) | ![Imagen Sanador](Lite.png) |
+| ![Imagen DPS](https://github.com/user-attachments/assets/c04abbd5-a97e-4c5b-b0ef-7568a2af978e) | ![Imagen DPS](https://github.com/user-attachments/assets/48a87961-de37-45c2-b496-6e41e024c0f0) | ![Imagen DPS](https://github.com/user-attachments/assets/364f194b-e553-4545-b96d-58c12154a1a8) |
 | :---: |:---:| :---:|
 
 - **Drag:** Click and drag the arrow indicator to move the window.
