@@ -14,3 +14,31 @@ dist/logs/
 /Prerequisites/npcap-1.83.exe
 pnpm-lock.yaml
 server - copia - copia.js
+
+# Additional ignores added by automation
+# Build electron output
+dist_electron/
+
+# Environment files (secrets)
+.env
+.env.*
+
+# Key and cert files
+*.pem
+*.key
+*.p12
+*.jks
+
+# Editor settings
+.vscode/
+.idea/
+
+# Local bptimer queue backup (if created inside repo)
+.bpsr-meter/
+
+# Build config (generated at build time with injected API key)
+build-config.js
+public/build-config.js
+
+# Carpeta 'ignore'
+ignore/

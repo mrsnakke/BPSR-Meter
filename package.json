@@ -1,6 +1,6 @@
 {
   "name": "bpsr-meter",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "BPSR Meter",
   "main": "electron-main.js",
   "bin": {
@@ -14,7 +14,7 @@
     "start": "electron .",
     "lint:pritter": "prettier --write .",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dist": "electron-builder --win --x64"
+    "dist": "node tools/prepare-dist.js && electron-builder --win --x64"
   },
   "keywords": [],
   "author": "dmlgzs <https://github.com/dmlgzs/StarResonanceDamageCounter>",
@@ -24,6 +24,7 @@
   "license": "AGPL-3.0",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
+    "@woheedev/bptimer-api-client": "^0.1.4",
     "cap": "^0.2.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^6.6.0",
+    "asar": "^3.2.0",
     "electron": "^38.0.0",
     "electron-builder": "^26.0.12",
     "prettier": "^3.6.2",

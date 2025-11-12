@@ -1,8 +1,18 @@
+'use strict';
 const zlib = require('zlib');
 const pb = require('./blueprotobuf');
 const Long = require('long');
 const pbjs = require('protobufjs/minimal');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
+const path = require('path');
+const os = require('os');
+
+// Archivo para persistir la cola de BPTimer (en el home del usuario)
+const BPTIMER_QUEUE_FILE = path.join(os.homedir(), '.bpsr-meter', 'bptimer_queue.json');
+// Límites para la cola persistente
+const BPTIMER_QUEUE_MAX_ITEMS = 1000; // máximo ítems a conservar
+const BPTIMER_QUEUE_TTL_MS = 24 * 60 * 60 * 1000; // TTL por item: 24 horas
 
 const monsterNames = require('../tables/monster_names.json');
 
@@ -231,7 +241,8 @@ const isUuidPlayer = (uuid) => {
 };
 
 const isUuidMonster = (uuid) => {
-    return (uuid.toBigInt() & 0xffffn) === 64n;
+    const low = uuid.toBigInt() & 0xffffn;
+    return low === 64n || low === 32832n;
 };
 
 const doesStreamHaveIdentifier = (reader) => {
@@ -254,11 +265,232 @@ const streamReadString = (reader) => {
 
 let currentUserUuid = Long.ZERO;
 
+// Safe loader for BPTimerClient: try normal require, then a direct CJS bundle require,
+// and finally fall back to dynamic import (async). This prevents startup crash when
+// the package is published as ESM-only and the app uses CommonJS require.
+let BPTimerClient = null;
+try {
+    // Preferred: package provides a CJS entry or exports.require mapping
+    const mod = require('@woheedev/bptimer-api-client');
+    BPTimerClient = mod && (mod.BPTimerClient || mod.default || mod);
+} catch (e1) {
+    try {
+        // Fallback: try to require the known CJS bundle path inside the package
+        const mod2 = require('@woheedev/bptimer-api-client/dist/cjs/index.js');
+        BPTimerClient = mod2 && (mod2.BPTimerClient || mod2.default || mod2);
+    } catch (e2) {
+        // Leave BPTimerClient null for now; we'll attempt async dynamic import later when needed
+        BPTimerClient = null;
+    }
+}
+
+// Función auxiliar para extraer posición desde un AttrCollection
+function extractPosFromAttrCollection(attrCollection) {
+  if (!attrCollection) return null;
+
+  // 1) Buscar en MapAttrs (MapAttr -> MapAttrValue.Key/Value)
+  if (Array.isArray(attrCollection.MapAttrs) && attrCollection.MapAttrs.length) {
+    for (const mapAttr of attrCollection.MapAttrs) {
+      if (!mapAttr.Attrs || !Array.isArray(mapAttr.Attrs)) continue;
+      for (const mv of mapAttr.Attrs) {
+        try {
+          const key = mv.Key ? Buffer.from(mv.Key).toString() : null;
+          if (!key) continue;
+          const k = key.toLowerCase();
+          if (k.includes('pos') || k.includes('position') || k.includes('pos_x')) {
+            // Intentar leer 3 floats (X,Y,Z) desde mv.Value
+            if (!mv.Value) continue;
+            const reader = pbjs.Reader.create(mv.Value);
+            // Muchos layouts usan 3 floats consecutivos
+            const x = reader.float();
+            const y = reader.float();
+            const z = reader.float();
+            if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+              return { x, y, z };
+            }
+          }
+        } catch (e) {
+          // ignore parse error y continuar buscando
+        }
+      }
+    }
+  }
+
+  // 2) Buscar en Attr.RawData (algunas veces la posición viene embebida en un Attr específico)
+  if (Array.isArray(attrCollection.Attrs)) {
+    for (const attr of attrCollection.Attrs) {
+      if (!attr.RawData) continue;
+      try {
+        const r = pbjs.Reader.create(attr.RawData);
+        // Intentar leer 3 floats desde el principio. Si el layout difiere, esto fallará y se capturará.
+        const x = r.float();
+        const y = r.float();
+        const z = r.float();
+        if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+          return { x, y, z };
+        }
+      } catch (e) {
+        // no es el layout esperado
+      }
+    }
+  }
+
+  return null;
+}
+
 class PacketProcessor {
-    constructor({ logger, userDataManager, onLocalPlayerUidDetected }) {
+    constructor({ logger, userDataManager, onLocalPlayerUidDetected, io, bptimerApiKey, bptimerEnabled }) {
         this.logger = logger;
         this.userDataManager = userDataManager;
         this.onLocalPlayerUidDetected = onLocalPlayerUidDetected;
+        this.io = io; // Guardar la instancia de socket.io
+        this.bptimerEnabled = bptimerEnabled; // Estado inicial del switch de BPTimer
+
+        // Cola para reportes a BPTimer cuando el cliente no esté listo aún
+        this._bptimerQueue = [];
+        this._bptimerInitializing = false;
+        // Intentar cargar cola persistente desde disco
+        try {
+            if (fs.existsSync(BPTIMER_QUEUE_FILE)) {
+                const raw = fs.readFileSync(BPTIMER_QUEUE_FILE, 'utf8');
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr)) {
+                    // Normalizar (soportar formatos antiguos donde se guardaba sólo payload)
+                    const now = Date.now();
+                    this._bptimerQueue = arr.map(item => {
+                        if (item && item.payload !== undefined && item.ts !== undefined) return item;
+                        // formato antiguo: item es payload directamente
+                        return { payload: item, ts: now };
+                    });
+                    this._pruneBPTimerQueue();
+                    this.logger.info(`Cargada cola de BPTimer desde disco: ${this._bptimerQueue.length} items`);
+                }
+            }
+        } catch (e) {
+            this.logger.warn('No se pudo cargar cola persistente de BPTimer: ' + e.message);
+            this._bptimerQueue = [];
+        }
+
+        // Inicializar enemyCache.hp_pct y enemyCache.pos si no existen
+        this.userDataManager.enemyCache.hp_pct = this.userDataManager.enemyCache.hp_pct || new Map();
+        this.userDataManager.enemyCache.pos = this.userDataManager.enemyCache.pos || new Map();
+
+        // Inicializar BPTimerClient si se proporciona una clave API
+        if (bptimerApiKey) {
+            if (BPTimerClient) {
+                try {
+                    this.bptimerClient = new BPTimerClient({
+                        api_url: 'https://db.bptimer.com', // URL de la API por defecto
+                        api_key: bptimerApiKey,
+                        logger: {
+                            info: (message) => this.logger.info(`[BPTimerClient] ${message}`),
+                            debug: (message) => this.logger.debug(`[BPTimerClient] ${message}`)
+                        },
+                        log_level: 'info' // Puedes cambiar a 'debug' para más logs
+                    });
+                    this.logger.info('BPTimerClient inicializado.');
+                    // Si había reportes en cola, enviarlos
+                    if (this._bptimerQueue.length > 0) this._flushBPTimerQueue();
+                } catch (err) {
+                    this.bptimerClient = null;
+                    this.logger.warn('Error al inicializar BPTimerClient: ' + err.message);
+                }
+            } else {
+                this.bptimerClient = null;
+                this.logger.warn('BPTimerClient no disponible sincrónicamente; intentar import dinámico en background.');
+                // Intentar import dinámico en background (funciona si el paquete es ESM-only)
+                this._bptimerInitializing = true;
+                import('@woheedev/bptimer-api-client').then((mod) => {
+                    const Cls = mod && (mod.BPTimerClient || mod.default || mod);
+                    if (!Cls) {
+                        this.logger.warn('BPTimerClient no encontrado tras import dinámico.');
+                        this._bptimerInitializing = false;
+                        return;
+                    }
+                    try {
+                        this.bptimerClient = new Cls({
+                            api_url: 'https://db.bptimer.com',
+                            api_key: bptimerApiKey,
+                            logger: {
+                                info: (message) => this.logger.info(`[BPTimerClient] ${message}`),
+                                debug: (message) => this.logger.debug(`[BPTimerClient] ${message}`)
+                            },
+                            log_level: 'info'
+                        });
+                        this.logger.info('BPTimerClient inicializado vía import dinámico.');
+                        // Import dinámico completado: enviar cualquier reporte pendiente
+                        this._bptimerInitializing = false;
+                        if (this._bptimerQueue.length > 0) this._flushBPTimerQueue();
+                    } catch (e) {
+                        this._bptimerInitializing = false;
+                        this.logger.warn('Error al inicializar BPTimerClient tras import dinámico: ' + e.message);
+                    }
+                }).catch((err) => {
+                    this._bptimerInitializing = false;
+                    this.logger.warn('Import dinámico de BPTimerClient falló: ' + err.message);
+                });
+            }
+        } else {
+            this.bptimerClient = null;
+            this.logger.warn('BPTimerClient no inicializado: bptimerApiKey no proporcionada.');
+        }
+    }
+
+    /**
+     * Vacía la cola de reportes a BPTimer cuando el cliente está disponible.
+     */
+    _flushBPTimerQueue() {
+        if (!this.bptimerClient) return;
+        // Enviar elementos respetando formato { payload, ts }
+        while (this._bptimerQueue.length > 0) {
+            const entry = this._bptimerQueue.shift();
+            if (!entry) continue;
+            const { payload, ts } = entry;
+            // Saltar items expirados
+            if (ts && (Date.now() - ts) > BPTIMER_QUEUE_TTL_MS) {
+                this.logger.info('Descartando reporte en cola por TTL expirado.');
+                continue;
+            }
+            try {
+                this.logger.info(`[BPTimer] Enviando reporte en cola: ${JSON.stringify(payload)}`);
+                this.bptimerClient.reportHP(payload).catch(e => {
+                    this.logger.error(`Error al enviar reporte en cola a BPTimer: ${e.message}`);
+                });
+            } catch (e) {
+                this.logger.error(`Fallo al procesar un reporte en cola: ${e.message}`);
+            }
+        }
+        // Actualizar almacenamiento en disco (escribir cola actual, probablemente vacía)
+        // Escribir la representación serializable (array de {payload,ts})
+        fsPromises.mkdir(path.dirname(BPTIMER_QUEUE_FILE), { recursive: true }).then(() => {
+            return fsPromises.writeFile(BPTIMER_QUEUE_FILE, JSON.stringify(this._bptimerQueue), 'utf8');
+        }).catch((e) => {
+            this.logger.warn('No se pudo actualizar el archivo de cola de BPTimer: ' + e.message);
+        });
+    }
+
+    async _saveBPTimerQueueToDisk() {
+        try {
+            await fsPromises.mkdir(path.dirname(BPTIMER_QUEUE_FILE), { recursive: true });
+            await fsPromises.writeFile(BPTIMER_QUEUE_FILE, JSON.stringify(this._bptimerQueue), 'utf8');
+        } catch (e) {
+            this.logger.warn('Fallo al guardar la cola de BPTimer en disco: ' + e.message);
+        }
+    }
+
+    _pruneBPTimerQueue() {
+        const now = Date.now();
+        // eliminar por TTL
+        this._bptimerQueue = this._bptimerQueue.filter(entry => {
+            if (!entry) return false;
+            if (!entry.ts) return true; // conservar si no hay ts (compatibilidad)
+            return (now - entry.ts) <= BPTIMER_QUEUE_TTL_MS;
+        });
+        // limitar tamaño: conservar los más recientes (los últimos items)
+        if (this._bptimerQueue.length > BPTIMER_QUEUE_MAX_ITEMS) {
+            const start = this._bptimerQueue.length - BPTIMER_QUEUE_MAX_ITEMS;
+            this._bptimerQueue = this._bptimerQueue.slice(start);
+        }
     }
 
     _decompressPayload(buffer) {
@@ -274,6 +506,7 @@ class PacketProcessor {
 
         let targetUuid = aoiSyncDelta.Uuid;
         if (!targetUuid) return;
+        const tgtUuid = targetUuid.toString();
         const isTargetPlayer = isUuidPlayer(targetUuid);
         const isTargetMonster = isUuidMonster(targetUuid);
         targetUuid = targetUuid.shiftRight(16);
@@ -283,7 +516,14 @@ class PacketProcessor {
             if (isTargetPlayer) {
                 this._processPlayerAttrs(targetUuid.toNumber(), attrCollection.Attrs);
             } else if (isTargetMonster) {
-                this._processEnemyAttrs(targetUuid.toNumber(), attrCollection.Attrs);
+                this._processEnemyAttrs(tgtUuid, targetUuid.toNumber(), attrCollection.Attrs);
+            }
+        }
+
+        const BuffEffectSync = aoiSyncDelta.BuffEffect;
+        if (isTargetMonster && BuffEffectSync && BuffEffectSync.BuffEffects) {
+            const BuffEffects = BuffEffectSync.BuffEffects;
+            for (const BuffEffect of BuffEffects) {
             }
         }
 
@@ -296,6 +536,7 @@ class PacketProcessor {
             if (!skillId) continue;
 
             let attackerUuid = syncDamageInfo.TopSummonerId || syncDamageInfo.AttackerUuid;
+            const atkUuid = attackerUuid.toString();
             if (!attackerUuid) continue;
             const isAttackerPlayer = isUuidPlayer(attackerUuid);
             attackerUuid = attackerUuid.shiftRight(16);
@@ -362,6 +603,9 @@ class PacketProcessor {
                         );
                     }
                 }
+                if (isDead) {
+                    this.userDataManager.enemyCache.hp.set(tgtUuid, 0);
+                }
             }
 
             let extra = [];
@@ -380,8 +624,8 @@ class PacketProcessor {
                 }
                 infoStr += `#${attackerUuid.toString()}(player)`;
             } else {
-                if (this.userDataManager.enemyCache.name.has(attackerUuid.toNumber())) {
-                    infoStr += this.userDataManager.enemyCache.name.get(attackerUuid.toNumber());
+                if (this.userDataManager.enemyCache.name.has(atkUuid)) {
+                    infoStr += this.userDataManager.enemyCache.name.get(atkUuid);
                 }
                 infoStr += `#${attackerUuid.toString()}(enemy)`;
             }
@@ -394,8 +638,8 @@ class PacketProcessor {
                 }
                 targetName += `#${targetUuid.toString()}(player)`;
             } else {
-                if (this.userDataManager.enemyCache.name.has(targetUuid.toNumber())) {
-                    targetName += this.userDataManager.enemyCache.name.get(targetUuid.toNumber());
+                if (this.userDataManager.enemyCache.name.has(tgtUuid)) {
+                    targetName += this.userDataManager.enemyCache.name.get(tgtUuid);
                 }
                 targetName += `#${targetUuid.toString()}(enemy)`;
             }
@@ -468,6 +712,74 @@ class PacketProcessor {
 
             if (vData.Attr && vData.Attr.MaxHp) this.userDataManager.setAttrKV(playerUid, 'max_hp', vData.Attr.MaxHp.toNumber());
 
+            // Extraer LineId y Posición XYZ
+            let lineId = null;
+            let position = null;
+            
+            // helper: coerce various protobuf number-like shapes to JS number or null
+            const _toNumber = (val) => {
+                if (val == null) return null;
+                if (typeof val === 'number') return val;
+                if (typeof val === 'bigint') return Number(val);
+                if (typeof val === 'string') {
+                    const n = Number(val);
+                    return Number.isNaN(n) ? null : n;
+                }
+                if (typeof val.toNumber === 'function') {
+                    try {
+                        return val.toNumber();
+                    } catch (e) {
+                        return null;
+                    }
+                }
+                // protobufjs sometimes returns plain objects with lowercase keys
+                if (val && typeof val === 'object' && ('low' in val || 'high' in val)) {
+                    try {
+                        // Use Long.fromBits if available
+                        if (Long && typeof Long.fromBits === 'function') {
+                            return Long.fromBits(val.low || 0, val.high || 0).toNumber();
+                        }
+                    } catch (e) {
+                        return null;
+                    }
+                }
+                return null;
+            };
+
+            if (vData.SceneData) {
+                // Extraer LineId desde SceneData
+                let rawLine = vData.SceneData.LineId ?? vData.SceneData.lineid ?? vData.SceneData.lineId ?? vData.SceneData.line;
+                lineId = _toNumber(rawLine);
+                
+                if (vData.SceneData.Pos) {
+                    const pos = vData.SceneData.Pos;
+                    position = {
+                        x: _toNumber(pos.X ?? pos.x),
+                        y: _toNumber(pos.Y ?? pos.y),
+                        z: _toNumber(pos.Z ?? pos.z)
+                    };
+                }
+            }
+
+            // Use cached values as fallback to avoid overwriting valid stored data with null
+            const cachedUser = this.userDataManager.getUser ? this.userDataManager.getUser(playerUid) : null;
+            const playerInfo = {
+                uid: playerUid,
+                line: lineId != null ? lineId : (cachedUser && cachedUser.line != null ? cachedUser.line : null),
+                position: position
+            };
+            this.logger.info(`[PLAYER_INFO] UID: ${playerInfo.uid}, Line: ${playerInfo.line}, Position: X=${playerInfo.position ? playerInfo.position.x : 'N/A'}, Y=${playerInfo.position ? playerInfo.position.y : 'N/A'}, Z=${playerInfo.position ? playerInfo.position.z : 'N/A'}`);
+            
+            // Emitir la información al frontend a través de socket.io
+            if (this.io) {
+                this.io.emit('player_info', playerInfo);
+            }
+
+            // Actualizar la información de línea en UserDataManager sólo si viene valor válido
+            if (lineId != null) {
+                this.userDataManager.setAttrKV(playerUid, 'line', lineId);
+            }
+
             if (!vData.CharBase) return;
             const charBase = vData.CharBase;
 
@@ -483,7 +795,7 @@ class PacketProcessor {
             if (professionList.CurProfessionId) {
                 const professionName = getProfessionNameFromId(professionList.CurProfessionId);
                 this.logger.debug(`_processSyncContainerData: Setting profession for UID ${playerUid}: ${professionName}`);
-                this.userDataManager.setProfession(playerUid, professionName);
+                this.userDataManager.getUser(playerUid).setMainProfession(professionName);
             }
         } catch (err) {
             fs.writeFileSync('./SyncContainerData.dat', payloadBuffer);
@@ -555,7 +867,7 @@ class PacketProcessor {
                         const curProfessionId = messageReader.readUInt32LE();
                         messageReader.readInt32();
                         if (curProfessionId)
-                            this.userDataManager.setProfession(currentUserUuid.shiftRight(16).toNumber(), getProfessionNameFromId(curProfessionId));
+                            this.userDataManager.getUser(currentUserUuid.shiftRight(16).toNumber()).setMainProfession(getProfessionNameFromId(curProfessionId));
                         break;
                     default:
                         // unhandle
@@ -585,7 +897,7 @@ class PacketProcessor {
                     const professionId = reader.int32();
                     const professionName = getProfessionNameFromId(professionId);
                     this.logger.debug(`_processPlayerAttrs: Setting profession for UID ${playerUid}: ${professionName}`);
-                    this.userDataManager.setProfession(playerUid, professionName);
+                    this.userDataManager.getUser(playerUid).setMainProfession(professionName);
                     break;
                 case AttrType.AttrFightPoint:
                     const playerFightPoint = reader.int32();
@@ -634,44 +946,75 @@ class PacketProcessor {
         }
     }
 
-    _processEnemyAttrs(enemyUid, attrs) {
+    _processEnemyAttrs(enemyUuid, enemyUid, attrs) {
         for (const attr of attrs) {
             if (!attr.Id || !attr.RawData) continue;
             const reader = pbjs.Reader.create(attr.RawData);
-            this.logger.debug(`Found attrId ${attr.Id} for E${enemyUid} ${attr.RawData.toString('base64')}`);
+            this.logger.debug(`Found attrId ${attr.Id} for ${enemyUuid} E${enemyUid} ${attr.RawData.toString('base64')}`);
             switch (attr.Id) {
                 case AttrType.AttrName:
                     const enemyName = reader.string();
-                    this.userDataManager.enemyCache.name.set(enemyUid, enemyName);
-                    this.logger.info(`Found monster name ${enemyName} for id ${enemyUid}`);
+                    this.userDataManager.enemyCache.name.set(enemyUuid, enemyName);
+                    this.logger.info(`Found monster name ${enemyName} for id ${enemyUid} uuid ${enemyUuid}`);
                     break;
                 case AttrType.AttrId:
                     const attrId = reader.int32();
                     const name = monsterNames[attrId];
                     if (name) {
-                        this.logger.info(`Found moster name ${name} for id ${enemyUid}`);
-                        this.userDataManager.enemyCache.name.set(enemyUid, name);
+                        this.logger.info(`Found moster name ${name} for id ${enemyUid} uuid ${enemyUuid}`);
+                        this.userDataManager.enemyCache.name.set(enemyUuid, name);
                     }
                     break;
-                case AttrType.AttrHp:
+                case AttrType.AttrHp: {
                     const enemyHp = reader.int32();
-                    this.userDataManager.enemyCache.hp.set(enemyUid, enemyHp);
+                    this.userDataManager.enemyCache.hp.set(enemyUuid, enemyHp);
+                    const maxH = this.userDataManager.enemyCache.maxHp.get(enemyUuid);
+                    if (maxH) {
+                        const pct = Math.round((enemyHp / maxH) * 100);
+                        this.userDataManager.enemyCache.hp_pct.set(enemyUuid, pct);
+                    }
                     break;
-                case AttrType.AttrMaxHp:
+                }
+                case AttrType.AttrMaxHp: {
                     const enemyMaxHp = reader.int32();
-                    this.userDataManager.enemyCache.maxHp.set(enemyUid, enemyMaxHp);
+                    this.userDataManager.enemyCache.maxHp.set(enemyUuid, enemyMaxHp);
+                    const hp = this.userDataManager.enemyCache.hp.get(enemyUuid);
+                    if (hp != null) {
+                        const pct = Math.round((hp / enemyMaxHp) * 100);
+                        this.userDataManager.enemyCache.hp_pct.set(enemyUuid, pct);
+                    }
                     break;
+                }
                 default:
                     // this.logger.debug(`Found unknown attrId ${attr.Id} for E${enemyUid} ${attr.RawData.toString('base64')}`);
                     break;
             }
+        }
+        // Extraer posición después de procesar todos los atributos
+        const attrCollection = { Attrs: attrs }; // Recrear attrCollection para extractPosFromAttrCollection
+        const pos = extractPosFromAttrCollection(attrCollection);
+        if (pos) {
+            this.userDataManager.enemyCache.pos.set(enemyUuid, pos);
         }
     }
 
     _processSyncNearEntities(payloadBuffer) {
         const syncNearEntities = pb.SyncNearEntities.decode(payloadBuffer);
         // this.logger.debug(JSON.stringify(syncNearEntities, null, 2));
-
+        if (syncNearEntities.Disappear) {
+            for (const entity of syncNearEntities.Disappear) {
+                const entityUuid = entity.Uuid;
+                if (entityUuid && isUuidMonster(entityUuid)) {
+                    const entityUid = entityUuid.shiftRight(16).toNumber();
+                    if (entity.Type == pb.EDisappearType.EDisappearDead) {
+                        this.userDataManager.enemyCache.hp.set(entityUuid, 0);
+                        // También limpiar la posición y el HP% si el monstruo desaparece/muere
+                        this.userDataManager.enemyCache.hp_pct.delete(entityUuid);
+                        this.userDataManager.enemyCache.pos.delete(entityUuid);
+                    }
+                }
+            }
+        }
         if (!syncNearEntities.Appear) return;
         for (const entity of syncNearEntities.Appear) {
             const entityUuid = entity.Uuid;
@@ -682,7 +1025,9 @@ class PacketProcessor {
             if (attrCollection && attrCollection.Attrs) {
                 switch (entity.EntType) {
                     case pb.EEntityType.EntMonster:
-                        this._processEnemyAttrs(entityUid, attrCollection.Attrs);
+                        this._processEnemyAttrs(entityUuid.toString(), entityUid, attrCollection.Attrs);
+                        // Después de procesar los atributos, intentar enviar el reporte a BPTimer
+                        this._sendBPTimerReport(entityUuid.toString(), entityUid);
                         break;
                     case pb.EEntityType.EntChar:
                         this._processPlayerAttrs(entityUid, attrCollection.Attrs);
@@ -693,6 +1038,60 @@ class PacketProcessor {
                 }
             }
         }
+    }
+
+    _sendBPTimerReport(monsterUuid, monsterUid) {
+        if (!this.bptimerEnabled) {
+            this.logger.debug('[BPTimer] Envío deshabilitado por switch.');
+            return;
+        }
+
+        const monsterId = monsterUid; // Usamos el UID como monster_id
+        const hpPct = this.userDataManager.enemyCache.hp_pct.get(monsterUuid);
+        const position = this.userDataManager.enemyCache.pos.get(monsterUuid);
+        const line = this.userDataManager.getUser(currentUserUuid.shiftRight(16).toNumber()).line; // Obtener la línea del jugador local
+
+        if (monsterId && hpPct != null && position && line != null) {
+            const payload = {
+                monster_id: monsterId,
+                hp_pct: hpPct,
+                line: line,
+                pos_x: Math.round(position.x * 100) / 100,
+                pos_y: Math.round(position.y * 100) / 100,
+                pos_z: Math.round(position.z * 100) / 100
+            };
+
+            if (!this.bptimerClient) {
+                // Cliente no listo: encolar y salir
+                this.logger.info(`[BPTimer] Cliente no listo: encolando reporte: ${JSON.stringify(payload)}`);
+                // Encolar como {payload, ts}
+                this._bptimerQueue.push({ payload, ts: Date.now() });
+                // Podar y guardar cola en disco (no bloqueante)
+                try {
+                    this._pruneBPTimerQueue();
+                    this._saveBPTimerQueueToDisk();
+                } catch (e) {
+                    this.logger.warn('Error al iniciar guardado de cola: ' + e.message);
+                }
+                return;
+            }
+
+            this.logger.info(`[BPTimer] Enviando reporte: ${JSON.stringify(payload)}`);
+            this.bptimerClient.reportHP(payload).catch(e => {
+                this.logger.error(`Error al enviar reporte a BPTimer: ${e.message}`);
+            });
+        } else {
+            this.logger.debug(`[BPTimer] No se pudo enviar el reporte. Datos incompletos: monsterId=${monsterId}, hpPct=${hpPct}, position=${JSON.stringify(position)}, line=${line}`);
+        }
+    }
+
+    /**
+     * Actualiza el estado de habilitación/deshabilitación del envío a BPTimer.
+     * @param {boolean} enabled - true para habilitar, false para deshabilitar.
+     */
+    setBptimerEnabled(enabled) {
+        this.bptimerEnabled = enabled;
+        this.logger.info(`[BPTimer] Envío a BPTimer actualizado a: ${enabled ? 'habilitado' : 'deshabilitado'}`);
     }
 
     _processNotifyMsg(reader, isZstdCompressed) {
@@ -780,7 +1179,8 @@ class PacketProcessor {
                 }
             } while (packetsReader.remaining() > 0);
         } catch (e) {
-            this.logger.error(`Fail while parsing data for player ${currentUserUuid.shiftRight(16)}.\nErr: ${e}`);
+            const playerIdentifier = currentUserUuid && !currentUserUuid.isZero() ? currentUserUuid.shiftRight(16).toString() : 'Unknown';
+            this.logger.error(`Fail while parsing data for player ${playerIdentifier}.\nErr: ${e}`);
         }
     }
 }

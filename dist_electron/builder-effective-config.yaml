@@ -35,4 +35,4 @@ win:
 nsis:
   include: extra.nsh
   deleteAppDataOnUninstall: true
-electronVersion: 38.0.0
+electronVersion: 38.6.0

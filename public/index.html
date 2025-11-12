@@ -24,6 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Incluir la librería de cliente de Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         /* Botón Advanced/Lite: rectangular y alargado */
         .advanced-lite-btn {
@@ -708,6 +710,90 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         #exitlag-button:hover {
             filter: brightness(1.2); /* Ligeramente más brillante al pasar el ratón */
         }
+        /* Estilos para el switch BPTimer */
+        .bptimer-control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Espacio entre el switch y la imagen */
+            margin-left: 10px; /* Espacio a la izquierda del grupo */
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px; /* Ancho del switch */
+            height: 24px; /* Alto del switch */
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 24px; /* Bordes redondeados */
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%; /* Círculo */
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3; /* Color azul cuando está activo */
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .slider:before {
+            -webkit-transform: translateX(16px);
+            -ms-transform: translateX(16px);
+            transform: translateX(16px);
+        }
+
+        /* Estilos para la imagen BPTimer */
+        .bptimer-icon {
+            width: 24px; /* Tamaño del emoji */
+            height: 24px;
+            cursor: help; /* Cambiar cursor para indicar tooltip */
+            vertical-align: middle;
+        }
+
+        /* Estilos para el tooltip (mensaje flotante) */
+        .bptimer-icon[title]:hover:after {
+            content: attr(title);
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            white-space: nowrap;
+            z-index: 100;
+            bottom: 125%; /* Posicionar encima de la imagen */
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none; /* Asegurar que el tooltip no interfiera con eventos del mouse */
+        }
     </style>
 </head>
 <body>
@@ -739,6 +825,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             <button class="control-button" id="exitlag-button" title="Toggle ExitLag" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;">
                 <img src="ExitLag.png" alt="ExitLag Icon" style="width: 100%; height: 100%; object-fit: contain; pointer-events: none;">
             </button>
+            <!-- Botón BPTimer Switch y su imagen -->
+            <div class="bptimer-control-group">
+                <label class="switch">
+                    <input type="checkbox" id="bptimer-switch">
+                    <span class="slider round"></span>
+                </label>
+                <img src="BPTimer.svg" alt="BPTimer Icon" class="bptimer-icon" title="World Boss HP Data For bptimer.con">
+            </div>
             <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
         </header>
         <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
@@ -954,6 +1048,70 @@ const professionMap = {
             resetDpsMeter();
         });
     }
+
+    // Conexión de Socket.IO
+    const socket = io(); // Asumiendo que `io` está disponible globalmente desde el script de socket.io
+
+    socket.on('connect', () => {
+        console.log('Conectado al servidor Socket.IO');
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Desconectado del servidor Socket.IO');
+    });
+
+    socket.on('data', (data) => {
+        // Lógica existente para actualizar el medidor de DPS
+        // ... (el código de fetchDataAndRender ya maneja esto)
+    });
+
+    // Escuchar el evento 'player_info' para mostrar en la consola del navegador
+    socket.on('player_info', (data) => {
+        console.log(`[PLAYER_INFO] UID: ${data.uid}, Line: ${data.line}, Position:`, data.position);
+    });
+
+    // Lógica para el switch de BPTimer
+    const bptimerSwitch = document.getElementById('bptimer-switch');
+    if (bptimerSwitch) {
+        // Obtener el estado inicial de BPTimer desde el servidor
+        fetch('/api/bptimer-status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    bptimerSwitch.checked = data.bptimerEnabled;
+                } else {
+                    console.error('Error al obtener el estado inicial de BPTimer:', data.msg);
+                }
+            })
+            .catch(error => console.error('Error de red al obtener el estado de BPTimer:', error));
+
+        // Manejar el cambio del switch
+        bptimerSwitch.addEventListener('change', async (event) => {
+            const isEnabled = event.target.checked;
+            try {
+                const response = await fetch('/api/bptimer-toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ enabled: isEnabled })
+                });
+                const data = await response.json();
+                if (data.code === 0) {
+                    console.log(data.msg);
+                } else {
+                    console.error('Error al cambiar el estado de BPTimer:', data.msg);
+                    // Revertir el estado del switch si hay un error
+                    event.target.checked = !isEnabled;
+                }
+            } catch (error) {
+                console.error('Error de red al cambiar el estado de BPTimer:', error);
+                // Revertir el estado del switch si hay un error de red
+                event.target.checked = !isEnabled;
+            }
+        });
+    }
+
 });    function applyZoom() {
         if (playerBarsContainer) {
             playerBarsContainer.style.transform = `scale(${currentZoom})`;

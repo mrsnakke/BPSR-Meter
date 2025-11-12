@@ -57,6 +57,8 @@ let globalSettings = {
     enableHistorySave: false, // Nueva configuración para guardar el historial de datos de usuario (deshabilitado por defecto)
 };
 
+let bptimerEnabled = true; // Nueva variable para controlar el envío a bptimer, habilitado por defecto.
+
 let server_port; // Declarar server_port aquí para que sea accesible globalmente
 
 const rl = readline.createInterface({
@@ -331,6 +333,8 @@ class UserData {
         this.skillUsage = new Map();
         this.fightPoint = 0;
         this.attr = {};
+        this.channel = null; // Nuevo campo para el canal
+        this.line = null;    // Nuevo campo para la línea
     }
 
     /** 添加伤害记录
@@ -430,6 +434,8 @@ class UserData {
             hp: this.attr.hp,
             max_hp: this.attr.max_hp,
             dead_count: this.deadCount,
+            channel: this.channel, // Incluir channel en el resumen
+            line: this.line,       // Incluir line en el resumen
         };
     }
 
@@ -662,6 +668,14 @@ class UserDataManager {
                 user.setAttrKV('hp', this.hpCache.get(uid));
             }
 
+            // Cargar channel y line desde la caché si existen
+            if (cachedData && cachedData.channel !== undefined && cachedData.channel !== null) {
+                user.channel = cachedData.channel;
+            }
+            if (cachedData && cachedData.line !== undefined && cachedData.line !== null) {
+                user.line = cachedData.line;
+            }
+
             this.users.set(uid, user);
         }
         return this.users.get(uid);
@@ -826,9 +840,24 @@ class UserDataManager {
             }
             this.userCache.get(uidStr).maxHp = value;
             this.saveUserCacheThrottled();
-        }
-        if (key === 'hp') {
+        } else if (key === 'hp') {
             this.hpCache.set(uid, value);
+        } else if (key === 'channel') {
+            user.channel = value;
+            const uidStr = String(uid);
+            if (!this.userCache.has(uidStr)) {
+                this.userCache.set(uidStr, {});
+            }
+            this.userCache.get(uidStr).channel = value;
+            this.saveUserCacheThrottled();
+        } else if (key === 'line') {
+            user.line = value;
+            const uidStr = String(uid);
+            if (!this.userCache.has(uidStr)) {
+                this.userCache.set(uidStr, {});
+            }
+            this.userCache.get(uidStr).line = value;
+            this.saveUserCacheThrottled();
         }
     }
 
@@ -1055,11 +1084,94 @@ async function main() {
     // Inicialización asíncrona del gestor de datos de usuario
     await userDataManager.initialize();
 
-    // Instanciar PacketProcessor, pasándole el callback para el UID del jugador local
+    // Si el puerto no fue pasado como argumento, se usará el predeterminado 8989
+    if (server_port === undefined || server_port === null) {
+        server_port = 8989;
+    }
+
+    // Configuración de Express y Socket.IO
+    app.use(cors());
+    app.use(express.json()); // Parsear cuerpo de solicitud JSON
+    app.use(express.static(path.join(__dirname, 'public'))); // Servir archivos estáticos
+    
+    // Declaración de server e io
+    const server = http.createServer(app);
+    const io = new Server(server, {
+        cors: {
+            origin: '*',
+            methods: ['GET', 'POST'],
+        },
+    });
+
+    // Obtener la API Key de bptimer: prioridad ENV -> keytar (OS secure store) -> build-config.js (empaquetado) -> settings.json
+    let bptimerApiKey = process.env.BPTIMER_API_KEY || null;
+    if (!bptimerApiKey) {
+        // intentar recuperar desde el almacén seguro del sistema usando keytar
+        try {
+            const keytar = require('keytar');
+            // service: 'bpsr-meter', account: 'bptimer_api_key'
+            const secret = await keytar.getPassword('bpsr-meter', 'bptimer_api_key');
+            if (secret) {
+                bptimerApiKey = secret;
+                logger.info('BPTimer API key cargada desde el almacén seguro del sistema.');
+            }
+        } catch (e) {
+            // keytar no disponible o fallo: ignorar
+        }
+    }
+
+    // Si aún no tenemos la key, intentar desde build-config.js (inyectada en tiempo de empaquetado)
+    if (!bptimerApiKey) {
+        try {
+            const buildConfig = require('./public/build-config.js');
+            if (buildConfig && buildConfig.BPTIMER_API_KEY) {
+                bptimerApiKey = buildConfig.BPTIMER_API_KEY;
+                logger.info('BPTimer API key cargada desde configuración de build (app empaquetada).');
+            }
+        } catch (e) {
+            // build-config.js no existe o fallo: ignorar
+        }
+    }
+
+    // Si aún no tenemos la key, buscar en settings.json (solo como último recurso y migrar a keytar si es posible)
+    if (!bptimerApiKey) {
+        try {
+            if (fs.existsSync(SETTINGS_PATH)) {
+                const raw = fs.readFileSync(SETTINGS_PATH, 'utf8');
+                const settingsObj = JSON.parse(raw || '{}');
+                const candidate = settingsObj.bptimerApiKey || settingsObj.bptimer_api_key || null;
+                if (candidate) {
+                    bptimerApiKey = candidate;
+                    logger.info('BPTimer API key encontrada en settings.json.');
+                    // Intentar migrar a keytar para no dejar la clave en texto plano
+                    try {
+                        const keytar = require('keytar');
+                        await keytar.setPassword('bpsr-meter', 'bptimer_api_key', bptimerApiKey);
+                        // realizar copia de seguridad del settings y remover la clave
+                        const backupPath = SETTINGS_PATH + '.bptimerkeybak';
+                        fs.writeFileSync(backupPath, raw, 'utf8');
+                        delete settingsObj.bptimerApiKey;
+                        delete settingsObj.bptimer_api_key;
+                        fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settingsObj, null, 2), 'utf8');
+                        logger.info('BPTimer API key migrada a almacén seguro y eliminada de settings.json (backup creado).');
+                    } catch (e) {
+                        logger.warn('No se pudo migrar BPTimer API key a almacén seguro: ' + e.message);
+                    }
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    // Instanciar PacketProcessor, pasándole el callback para el UID del jugador local, la instancia de io y la API Key
     const packetProcessor = new PacketProcessor({
         logger,
         userDataManager,
         onLocalPlayerUidDetected: sendLocalPlayerUidToMain,
+        io: io, // Pasar la instancia de socket.io
+        bptimerApiKey: bptimerApiKey, // Pasar la API Key
+        bptimerEnabled: bptimerEnabled, // Pasar el estado del switch de bptimer
     });
 
     // Guardar caché de usuario al salir del proceso
@@ -1081,23 +1193,6 @@ async function main() {
             userDataManager.updateAllRealtimeDps();
         }
     }, 50);
-
-    // Si el puerto no fue pasado como argumento, se usará el predeterminado 8989
-    if (server_port === undefined || server_port === null) {
-        server_port = 8989;
-    }
-
-    // Configuración de Express y Socket.IO
-    app.use(cors());
-    app.use(express.json()); // Parsear cuerpo de solicitud JSON
-    app.use(express.static(path.join(__dirname, 'public'))); // Servir archivos estáticos
-    const server = http.createServer(app);
-    const io = new Server(server, {
-        cors: {
-            origin: '*',
-            methods: ['GET', 'POST'],
-        },
-    });
 
     app.get('/icon.png', (req, res) => {
         res.sendFile(path.join(__dirname, 'icon.png'));
@@ -1357,6 +1452,24 @@ async function main() {
         globalSettings = { ...globalSettings, ...newSettings };
         await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 2), 'utf8');
         res.json({ code: 0, data: globalSettings });
+    });
+
+    // Nueva API para alternar el envío a BPTimer
+    app.post('/api/bptimer-toggle', (req, res) => {
+        const { enabled } = req.body;
+        if (typeof enabled === 'boolean') {
+            bptimerEnabled = enabled;
+            packetProcessor.setBptimerEnabled(bptimerEnabled); // Actualizar el estado en PacketProcessor
+            console.log(`Envío a BPTimer ${bptimerEnabled ? 'habilitado' : 'deshabilitado'}.`);
+            res.json({ code: 0, msg: `Envío a BPTimer ${bptimerEnabled ? 'habilitado' : 'deshabilitado'}.`, bptimerEnabled: bptimerEnabled });
+        } else {
+            res.status(400).json({ code: 1, msg: 'El parámetro "enabled" debe ser un booleano.' });
+        }
+    });
+
+    // API para obtener el estado actual de bptimerEnabled
+    app.get('/api/bptimer-status', (req, res) => {
+        res.json({ code: 0, bptimerEnabled: bptimerEnabled });
     });
 
     // Nueva API para alternar autoClearOnServerChange

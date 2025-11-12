@@ -1,0 +1,38 @@
+{
+  "name": "@woheedev/bptimer-api-client",
+  "version": "0.1.4",
+  "author": "Wohee",
+  "description": "An API client for tracking and submitting boss HP data to bptimer.com",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/cjs/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "bptimer",
+    "api-client"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/woheedev/bptimer.git",
+    "directory": "packages/bptimer-api-client"
+  }
+}
