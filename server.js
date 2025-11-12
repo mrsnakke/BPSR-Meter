@@ -886,9 +886,20 @@ class UserDataManager {
 
     /** Obtener datos de todos los usuarios */
     getAllUsersData() {
-        const result = {};
+        const allUsers = [];
         for (const [uid, user] of this.users.entries()) {
-            result[uid] = user.getSummary();
+            allUsers.push(user.getSummary());
+        }
+
+        // Ordenar usuarios por DPS total de forma descendente
+        allUsers.sort((a, b) => b.total_dps - a.total_dps);
+
+        // Tomar solo los 10 primeros usuarios
+        const top10Users = allUsers.slice(0, 10);
+
+        const result = {};
+        for (const userSummary of top10Users) {
+            result[userSummary.uid] = userSummary;
         }
         return result;
     }
