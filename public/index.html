@@ -24,8 +24,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Estilos específicos del Skill Analysis (copia local del backend reference) -->
+    <link rel="stylesheet" href="/css/análisis-combo.css">
     <!-- Incluir la librería de cliente de Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
+    <!-- ECharts (usado por el módulo Skill Analysis).
+         Carga local primero (/libs/echarts/echarts.min.js) y si falla, cae a CDN. -->
+    <script>
+        (function loadECharts(){
+            function load(src) {
+                var s = document.createElement('script');
+                s.src = src;
+                s.defer = true;
+                s.crossOrigin = 'anonymous';
+                s.onerror = function() {
+                    // Si falló la carga local, intentar CDN
+                    if (src.indexOf('cdn.jsdelivr.net') === -1) {
+                        load('https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js');
+                    } else {
+                        console.error('Failed to load ECharts from', src);
+                    }
+                };
+                document.head.appendChild(s);
+            }
+            // Intentar cargar primero la copia local (para builds offline)
+            load('/libs/echarts/echarts.min.js');
+        })();
+    </script>
     <style>
         /* Botón Advanced/Lite: rectangular y alargado */
         .advanced-lite-btn {
@@ -813,6 +838,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             <button class="control-button" id="zoom-out-button" title="Reducir tamaño"><i class="fa-solid fa-minus"></i></button>
             <!-- Botón Advanced/Lite -->
         <button class="control-button advanced-lite-btn" id="advanced-lite-btn" title="Toggle Advanced/Lite">Advanced</button>
+        <!-- Botón Skill (abre la vista de Skill Analysis) -->
+        <button class="control-button advanced-lite-btn" id="skill-button" title="Skill">Skill</button>
         <!-- Botón DPS/Healer solo visible en modo Lite -->
         <button class="control-button advanced-lite-btn" id="lite-dps-healer-btn" style="display:none;">DPS</button>
             <!-- Botón de bloqueo/desbloqueo -->
@@ -957,16 +984,25 @@ const professionMap = {
 
         // Lógica para el nuevo botón ExitLag
         if (exitLagButton) {
-            // Obtener el estado inicial del servidor
-            try {
-                const response = await fetch('/api/settings');
-                const settings = await response.json();
-                autoClearOnServerChange = settings.data.autoClearOnServerChange;
-                // El botón está activo (contorno verde) cuando autoClearOnServerChange es false
-                exitLagButton.classList.toggle('active', !autoClearOnServerChange);
-            } catch (error) {
-                console.error('Error al obtener la configuración inicial de ExitLag:', error);
-            }
+                const candidates = ['/api/settings', '/api/alternative-settings'];
+                let loaded = false;
+                for (let i = 0; i < candidates.length; i++) {
+                    try {
+                        const response = await fetch(candidates[i]);
+                        if (!response.ok) continue;
+                        const settings = await response.json();
+                        autoClearOnServerChange = (settings && settings.data && typeof settings.data.autoClearOnServerChange !== 'undefined')
+                            ? settings.data.autoClearOnServerChange
+                            : autoClearOnServerChange;
+                        exitLagButton.classList.toggle('active', !autoClearOnServerChange);
+                        loaded = true;
+                        break;
+                    } catch (error) {
+                        // intentar el siguiente candidato
+                        continue;
+                    }
+                }
+                if (!loaded) console.error('No settings endpoint found');
 
             exitLagButton.addEventListener('click', async () => { // Añadir async aquí
                 autoClearOnServerChange = !autoClearOnServerChange; // Alternar el estado
@@ -1003,6 +1039,13 @@ const professionMap = {
                 }
                 fetchDataAndRender();
                 updateWindowSize(); // Redimensionar al cambiar de modo
+                // If skill analysis view is open, hide it when switching modes
+                if (typeof window.hideSkillAnalysis === 'function') {
+                    try { window.hideSkillAnalysis(); } catch (e) { console.warn('hideSkillAnalysis failed', e); }
+                } else {
+                    // ensure main bars are visible
+                    const bars = document.getElementById('player-bars-container'); if (bars) bars.style.display = 'block';
+                }
             });
         }
         if (liteDpsHealerBtn) {
@@ -1012,6 +1055,10 @@ const professionMap = {
                 liteDpsHealerBtn.classList.toggle('lite', isLiteMode); /* Asegura que el botón Lite/Healer también tenga el estilo 'lite' */
                 fetchDataAndRender();
                 updateWindowSize(); // Redimensionar al cambiar de tipo en modo Lite
+                // Hide skill analysis if open
+                if (typeof window.hideSkillAnalysis === 'function') {
+                    try { window.hideSkillAnalysis(); } catch (e) { console.warn('hideSkillAnalysis failed', e); }
+                }
             });
         }
         // Inicializar visibilidad y estilo del botón al cargar
@@ -1092,6 +1139,30 @@ const professionMap = {
     socket?.on('data', (data) => {
         // Lógica existente para actualizar el medidor de DPS
         // ... (el código de fetchDataAndRender ya maneja esto)
+    });
+
+    // Escuchar el evento de limpieza del servidor
+    socket?.on('server_change_clear', () => {
+        console.log('[FRONTEND] Evento server_change_clear recibido. Limpiando UI.');
+        resetDpsMeter(); // Limpiar el medidor de DPS
+        if (window.stopSkillRealtimeUpdates) {
+            window.stopSkillRealtimeUpdates(); // Detener actualizaciones de Skill Analysis
+        }
+        if (window.clearSkillDisplay) {
+            window.clearSkillDisplay(); // Limpiar la UI de Skill Analysis
+        }
+        const skillPlayerSelect = document.getElementById('skillPlayerSelect');
+        if (skillPlayerSelect) {
+            skillPlayerSelect.value = ''; // Restablecer el selector de jugador
+            const defaultOption = skillPlayerSelect.querySelector('option[value=""]');
+            if (defaultOption) {
+                defaultOption.selected = true;
+            }
+        }
+        if (window.skillChart1) {
+            window.skillChart1.clear(); // Limpiar el gráfico de Skill Analysis
+            window.skillChart1.setOption({}); // Establecer opciones vacías
+        }
     });
 
     // Escuchar el evento 'player_info' para mostrar en la consola del navegador
@@ -1192,11 +1263,20 @@ const professionMap = {
 
         // Calcular la altura total sin escalar, incluyendo la cabecera y un búfer
         const totalContentHeightUnscaled = headerHeight + marginTop + borderWidth + barsHeight + 20; // Búfer de 20px
+        // If Skill Analysis view is visible, compute a larger target size
+        const skillContainer = document.getElementById('skill-analysis-container');
+        let finalWidth = Math.round(baseWidth * currentZoom);
+        let finalHeight = Math.round(totalContentHeightUnscaled * currentZoom);
 
-        // Aplicar el zoom actual al ancho y alto de la ventana
-        const finalWidth = Math.round(baseWidth * currentZoom);
-        const finalHeight = Math.round(totalContentHeightUnscaled * currentZoom);
-        
+        if (skillContainer && skillContainer.style.display !== 'none') {
+            // Prefer a wider layout for Skill Analysis
+            const desiredWidth = 1000; // px
+            // Compute desired height based on content but with a sensible min
+            const desiredHeight = Math.max(720, skillContainer.scrollHeight + headerHeight + 80);
+            finalWidth = Math.round(desiredWidth * currentZoom);
+            finalHeight = Math.round(desiredHeight * currentZoom);
+        }
+
         window.electronAPI.resizeWindow(finalWidth, finalHeight);
     }
 
@@ -1664,6 +1744,100 @@ const professionMap = {
             window.electronAPI.mouseLeave();
         }
     });
+
+    // Skill button: load module if necessary and open Skill Analysis view
+    (function attachSkillButton(){
+        const skillBtn = document.getElementById('skill-button');
+        if (!skillBtn) return;
+        skillBtn.addEventListener('click', async () => {
+            // Ensure a container for the skill analysis exists
+            let skillContainer = document.getElementById('skill-analysis-container');
+                        if (!skillContainer) {
+                                skillContainer = document.createElement('div');
+                                skillContainer.id = 'skill-analysis-container';
+                                // Full markup expected by the análisis-combo module
+                                skillContainer.innerHTML = `
+<div class="skill-analysis-view">
+    <div class="skill-analysis-header">
+        <h2 class="skill-analysis-title">Skill Analysis</h2>
+        <select id="skillPlayerSelect" class="skill-player-select"></select>
+        <div id="reset-skill-analysis-button-wrapper"><button class="control-button" id="resetSkillAnalysisButton">⟲</button></div>
+    </div>
+
+    <div class="skill-analysis-content" style="display:flex;gap:20px;">
+        <div class="liquid-glass-content-wrapper skill-user-summary">
+            <div class="liquidGlass-text">
+                <ul>
+                    <li class="skill-user-summary-item"><span class="skill-user-summary-label">Player:</span><span id="skillUserNickname" class="skill-user-summary-value">-</span></li>
+                    <li class="skill-user-summary-item"><span class="skill-user-summary-label">Class:</span><span id="skillUserProfession" class="skill-user-summary-value">-</span></li>
+                    <li class="skill-user-summary-item"><span class="skill-user-summary-label">Ability Score:</span><span id="fightPoint" class="skill-user-summary-value">-</span></li>
+                    <li class="skill-user-summary-item"><span class="skill-user-summary-label">Main Skill:</span><span id="mainSkillName" class="skill-user-summary-value">N/A</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="liquid-glass-content-wrapper skill-chart-info">
+            <div class="liquidGlass-text">
+                <h3 class="skill-chart-title">Skill Contribution</h3>
+                <ul id="top-skills-list" class="top-skills-list"></ul>
+            </div>
+        </div>
+
+        <div class="liquid-glass-content-wrapper" id="skillDamageChartWrapper" style="position:relative;flex:1;">
+            <div class="liquidGlass-text">
+                <div id="skillDamageChart" class="skill-chart-container"></div>
+                <div class="profession-icon-container"><img id="profession-icon" class="profession-icon" src="" alt=""></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="skill-table-container">
+            <table class="skill-table" id="skillTable">
+                <thead>
+                    <tr>
+                        <th>Skill</th><th>Type</th><th>Element</th><th>Critical %</th><th>Luck</th><th>Normal DMG</th><th>Total DMG</th><th>Hits</th>
+                    </tr>
+                </thead>
+                <tbody id="skillTableBody"><tr><td colspan="8">Select a player to view skill breakdown.</td></tr></tbody>
+            </table>
+    </div>
+</div>`;
+                                document.body.appendChild(skillContainer);
+                        }
+
+            // Hide main bars and show skill container
+            const bars = document.getElementById('player-bars-container');
+            if (bars) bars.style.display = 'none';
+            skillContainer.style.display = '';
+
+            // If module not yet loaded, load the canonical ASCII-named module only
+            if (typeof window.initSkillAnalysisView !== 'function') {
+                await new Promise((resolve) => {
+                    const s = document.createElement('script');
+                    s.src = '/js/modules/analisis-combo.js';
+                    s.onload = () => resolve();
+                    s.onerror = () => {
+                        console.warn('Failed to load /js/modules/analisis-combo.js');
+                        resolve();
+                    };
+                    document.head.appendChild(s);
+                });
+            }
+
+            // Call the module initializer if available
+            if (typeof window.initSkillAnalysisView === 'function') {
+                try {
+                    window.initSkillAnalysisView();
+                    // Resize window to fit Skill Analysis immediately after init
+                    if (typeof updateWindowSize === 'function') updateWindowSize();
+                } catch (e) {
+                    console.error('Error initializing Skill Analysis view', e);
+                }
+            } else {
+                console.warn('Skill Analysis module not available after loading attempts.');
+            }
+        });
+    })();
     </script>
 </body>
 </html>

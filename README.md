@@ -74,13 +74,15 @@ La aplicación se abrirá como una ventana superpuesta. Cuando inicies el juego,
 - **Bloquear/Desbloquear:** Haz clic en el botón del candado para bloquear o desbloquear la posición de la ventana. Cuando está bloqueada, la ventana ignorará los clics del ratón.
 - **Zoom:** Utiliza los botones `+` y `-` para aumentar o disminuir el tamaño de la interfaz.
 - **Cerrar:** Haz clic en el botón `X` para cerrar la aplicación.
+- **Skill:** Haz clic en el botón `Skill` para abrir la vista de "Skill Analysis", donde podrás ver un desglose detallado de las habilidades utilizadas, su daño, curación, tasas de crítico y suerte, y contribución elemental.
 - **F10:** Haz clic en `F0` para LImpiar datos.
 - **BPTimer:** Haz clic en el botón con el icono de `BPTimer` para activar o desactivar el reporte del porcentaje de vida actual de los jefes y el canal en el que están activos a `https://bptimer.com`.
 - **ExitLag:** Haz clic en el botón con el icono de `ExitLag` para activar compativilidad con exitlag.
 ## ExitLag Mode
 En este modo se desactiva el limpiado automatico al cambiar de instancia ya que no es compatible con exitlag.
 
-ExitLag Config: ExitLag en exit lag ve a Opciones y busca (metodo de redireccion de paquetes) asegurate que este en Antiguo-NDIS
+**ExitLag Config:** ExitLag en exit lag ve a Opciones y busca (metodo de redireccion de paquetes) asegurate que este en Antiguo-NDIS
+![Imagen DPS](https://github.com/mrsnakke/gachaIMG/blob/main/imagen_2025-11-14_070626684.png?raw=true)
 
 
 ## Solución de problemas
@@ -216,13 +218,14 @@ The application will open as an overlay window. When you start the game, it will
 - **Lock/Unlock:** Click the lock button to lock or unlock the window's position. When locked, the window will ignore mouse clicks.
 - **Zoom:** Use the `+` and `-` buttons to increase or decrease the interface size.
 - **Close:** Click the `X` button to close the application.
+- **Skill:** Click the `Skill` button to open the "Skill Analysis" view, where you can see a detailed breakdown of skills used, their damage, healing, critical and lucky rates, and elemental contribution.
 - **BPTimer:** Click the button with the `BPTimer` icon to activate or deactivate reporting the current HP percentage of bosses and their active channel to `https://bptimer.com`.
 - **ExitLag:** Click the button with the `ExitLag` icon to activate compatibility with ExitLag.
 ## ExitLag Mode
 In this mode, the automatic clearing when changing instances is disabled as it is not compatible with ExitLag.
 
 **ExitLag Config:** In ExitLag, go to Options and look for (Packets redirection Method) make sure it is in Legacy-NDIS..
-
+![Imagen DPS](https://github.com/mrsnakke/gachaIMG/blob/main/imagen_2025-11-14_070626684.png?raw=true)
  
 
 ## Troubleshooting

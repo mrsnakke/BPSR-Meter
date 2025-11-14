@@ -394,8 +394,8 @@ class UserData {
     constructor(uid) {
         this.uid = uid;
         this.name = '';
-        this.damageStats = new StatisticData(this, '伤害');
-        this.healingStats = new StatisticData(this, '治疗');
+        this.damageStats = new StatisticData(this, 'Damage');
+        this.healingStats = new StatisticData(this, 'Healing');
         this.takenDamage = 0;
         this.deadCount = 0;
         this.mainProfession = '未知'; // Nueva propiedad para la profesión principal
@@ -419,7 +419,7 @@ class UserData {
     addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue = 0) {
         this.damageStats.addRecord(damage, isCrit, isLucky, hpLessenValue);
         if (!this.skillUsage.has(skillId)) {
-            this.skillUsage.set(skillId, new StatisticData(this, '伤害', element));
+            this.skillUsage.set(skillId, new StatisticData(this, 'Damage', element));
         }
         this.skillUsage.get(skillId).addRecord(damage, isCrit, isCauseLucky, hpLessenValue);
         this.skillUsage.get(skillId).realtimeWindow.length = 0;
@@ -443,7 +443,7 @@ class UserData {
         // 记录技能使用情况
         skillId = skillId + 1000000000;
         if (!this.skillUsage.has(skillId)) {
-            this.skillUsage.set(skillId, new StatisticData(this, '治疗', element));
+            this.skillUsage.set(skillId, new StatisticData(this, 'Healing', element));
         }
         this.skillUsage.get(skillId).addRecord(healing, isCrit, isCauseLucky);
         this.skillUsage.get(skillId).realtimeWindow.length = 0;
@@ -1738,12 +1738,53 @@ async function main() {
     };
 
     // Manejo de conexión WebSocket
+    const skillUpdateIntervals = {}; // Almacenar intervalos por cliente (socket.id)
+
     io.on('connection', (socket) => {
         console.log('Cliente WebSocket conectado: ' + socket.id);
         io.emit('client_connected', { id: socket.id, msg: 'Cliente WebSocket conectado' }); // Emitir también a través de socket.io
 
+        // Listener para requestSkillUpdates: inicia envío de datos en tiempo real cada 50-100ms
+        socket.on('requestSkillUpdates', (uid) => {
+            const numericUid = Number(uid);
+            console.log(`[Skill] Cliente ${socket.id} solicita actualizaciones para UID ${numericUid}`);
+            
+            // Si ya hay un intervalo para este cliente, limpiarlo primero
+            if (skillUpdateIntervals[socket.id]) {
+                clearInterval(skillUpdateIntervals[socket.id]);
+            }
+
+            // Crear intervalo que envía datos cada 75ms (entre 50-100ms)
+            skillUpdateIntervals[socket.id] = setInterval(() => {
+                const skillData = userDataManager.getUserSkillData(numericUid);
+                if (skillData) {
+                    // Enviar solo al cliente que solicitó (socket.emit)
+                    socket.emit('skill_data', { code: 0, data: skillData });
+                } else {
+                    socket.emit('skill_data_error', { code: 1, msg: 'User not found', uid: numericUid });
+                    // Si no encontró datos, detener el intervalo
+                    clearInterval(skillUpdateIntervals[socket.id]);
+                    delete skillUpdateIntervals[socket.id];
+                }
+            }, 75); // 75ms = frecuencia entre 50-100ms solicitada
+        });
+
+        // Listener para stopSkillUpdates: detiene envío de datos en tiempo real
+        socket.on('stopSkillUpdates', () => {
+            console.log(`[Skill] Cliente ${socket.id} detiene actualizaciones`);
+            if (skillUpdateIntervals[socket.id]) {
+                clearInterval(skillUpdateIntervals[socket.id]);
+                delete skillUpdateIntervals[socket.id];
+            }
+        });
+
         socket.on('disconnect', () => {
             console.log('Cliente WebSocket desconectado: ' + socket.id);
+            // Limpiar intervalos cuando se desconecta
+            if (skillUpdateIntervals[socket.id]) {
+                clearInterval(skillUpdateIntervals[socket.id]);
+                delete skillUpdateIntervals[socket.id];
+            }
             io.emit('client_disconnected', { id: socket.id, msg: 'Cliente WebSocket desconectado' }); // Emitir también a través de socket.io
         });
     });

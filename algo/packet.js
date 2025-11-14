@@ -335,27 +335,27 @@ const getProfessionNameFromId = (professionId) => {
 const getDamageElement = (damageProperty) => {
     switch (damageProperty) {
         case EDamageProperty.General:
-            return '⚔️物';
+            return 'General';
         case EDamageProperty.Fire:
-            return '🔥火';
+            return 'Fire';
         case EDamageProperty.Water:
-            return '❄️冰';
+            return 'Ice'; // Nombre del archivo es Ice.webp
         case EDamageProperty.Electricity:
-            return '⚡雷';
+            return 'Lightning';
         case EDamageProperty.Wood:
-            return '🍀森';
+            return 'Forest'; // Nombre del archivo es Forest.webp
         case EDamageProperty.Wind:
-            return '💨风';
+            return 'Wind';
         case EDamageProperty.Rock:
-            return '⛰️岩';
+            return 'Earth'; // Nombre del archivo es Earth.webp
         case EDamageProperty.Light:
-            return '🌟光';
+            return 'Light'; // Ojo: LIght.webp con 'I' mayúscula
         case EDamageProperty.Dark:
-            return '🌑暗';
+            return 'Dark';
         case EDamageProperty.Count:
-            return '❓？'; // 未知
+            return 'Unknown'; // Placeholder
         default:
-            return '⚔️物';
+            return 'General';
     }
 };
 
