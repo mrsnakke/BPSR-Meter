@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     setWindowMovable: (movable) => ipcRenderer.send('set-window-movable', movable),
+    minimizeWindow: () => ipcRenderer.send('minimize-window'),
     closeWindow: () => ipcRenderer.send('close-window'),
     resizeWindow: (width, height) => ipcRenderer.send('resize-window', width, height),
     toggleLockState: () => ipcRenderer.send('toggle-lock-state'),

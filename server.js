@@ -15,10 +15,20 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// Cargar variables de entorno desde .env si existe (precedencia: .env < env vars del sistema)
+const path_module = require('path');
+const fs_check = require('fs');
+const envPath = path_module.join(__dirname, '.env');
+if (fs_check.existsSync(envPath)) {
+  const dotenv = require('dotenv');
+  dotenv.config({ path: envPath });
+}
+
 const cap = require('cap');
 const cors = require('cors');
 const readline = require('readline');
 const winston = require('winston');
+const Transport = require('winston-transport'); // Importar la clase Transport
 const zlib = require('zlib');
 const express = require('express');
 const http = require('http');
@@ -36,6 +46,66 @@ const print = console.log;
 const app = express();
 const { exec } = require('child_process');
 const findDefaultNetworkDevice = require('./algo/netInterfaceUtil');
+
+// Transporte personalizado para Winston que emite logs a través de Socket.IO
+class SocketIoTransport extends Transport {
+    constructor(options) {
+        super(options);
+        this.io = options.io;
+        this.name = 'socketio';
+    }
+
+    log(info, callback) {
+        setImmediate(() => {
+            this.emit('logged', info);
+        });
+
+        if (this.io) {
+            // Sólo emitir al frontend los logs relevantes para BPTimer o errores
+            let messageToSend = info.message || '';
+            // El logger puede incluir códigos ANSI (colores) o prefijos como [SERVER_LOG] [WARN]
+            // Normalizamos removiendo códigos ANSI y buscando la aparición de [BPTimer] o [BPTimerClient]
+            const stripped = String(messageToSend).replace(/\x1b\[[0-9;]*m/g, '');
+            const bptimerTag = '[BPTimer]';
+            const bptimerClientTag = '[BPTimerClient]';
+            let bptimerIndex = stripped.indexOf(bptimerTag);
+            let tagLength = bptimerTag.length;
+            
+            if (bptimerIndex === -1) {
+                bptimerIndex = stripped.indexOf(bptimerClientTag);
+                tagLength = bptimerClientTag.length;
+            }
+            
+            const isBptimer = bptimerIndex !== -1;
+            // Obtener el nivel numérico del log y del transport
+            const levels = winston.config.npm.levels; // Usar los niveles estándar de Winston
+            const logLevelValue = levels[info.level];
+            const transportLevelValue = levels[this.level];
+
+            // Si el nivel del log es menor que el nivel del transport, no lo enviamos
+            if (logLevelValue === undefined || transportLevelValue === undefined || logLevelValue > transportLevelValue) {
+                callback();
+                return;
+            }
+
+            // Si es un mensaje de BPTimer, extraemos el contenido relevante
+            if (isBptimer) {
+                messageToSend = stripped.substring(bptimerIndex + tagLength).trimStart();
+            } else {
+                // Para otros logs, usamos el mensaje original sin códigos ANSI
+                messageToSend = stripped;
+            }
+
+            this.io.emit('server_log', {
+                level: info.level,
+                message: messageToSend,
+                timestamp: info.timestamp
+            });
+        }
+
+        callback();
+    }
+}
 
 const skillConfig = require('./tables/skill_names.json').skill_names;
 const VERSION = '3.1';
@@ -418,6 +488,7 @@ class UserData {
 
     getSummary() {
         return {
+            uid: this.uid,
             realtime_dps: this.damageStats.realtimeStats.value,
             realtime_dps_max: this.damageStats.realtimeStats.max,
             total_dps: this.getTotalDps(),
@@ -886,20 +957,9 @@ class UserDataManager {
 
     /** Obtener datos de todos los usuarios */
     getAllUsersData() {
-        const allUsers = [];
-        for (const [uid, user] of this.users.entries()) {
-            allUsers.push(user.getSummary());
-        }
-
-        // Ordenar usuarios por DPS total de forma descendente
-        allUsers.sort((a, b) => b.total_dps - a.total_dps);
-
-        // Tomar solo los 10 primeros usuarios
-        const top10Users = allUsers.slice(0, 10);
-
         const result = {};
-        for (const userSummary of top10Users) {
-            result[userSummary.uid] = userSummary;
+        for (const [uid, user] of this.users.entries()) {
+            result[uid] = user.getSummary();
         }
         return result;
     }
@@ -1017,8 +1077,17 @@ class UserDataManager {
 }
 
 async function main() {
+    // Declaración de server e io (movido al principio para que logger tenga acceso)
+    const server = http.createServer(app);
+    const io = new Server(server, {
+        cors: {
+            origin: '*',
+            methods: ['GET', 'POST'],
+        },
+    });
+
     const logger = winston.createLogger({
-        level: 'info', // Forzar el nivel de log a 'info' para depuración
+        level: 'debug', // Establecer el nivel de log global a 'debug' para capturar todos los logs
         format: winston.format.combine(
             winston.format.colorize({ all: true }),
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -1026,7 +1095,10 @@ async function main() {
                 return `[${info.timestamp}] [${info.level}] ${info.message}`;
             }),
         ),
-        transports: [new winston.transports.Console()],
+        transports: [
+            new winston.transports.Console({ level: 'error' }), // La consola solo mostrará errores
+            new SocketIoTransport({ io: io, level: 'debug' }) // Socket.IO emitirá logs de debug y superiores
+        ],
     });
 
     const npcapReady = await checkAndInstallNpcap(logger);
@@ -1088,7 +1160,7 @@ async function main() {
         process.exit(1);
     }
     // Forzar el nivel de log a 'error' para que solo los errores se muestren en la consola
-    logger.level = 'error';
+    logger.level = 'error'; // Esto sobrescribirá el nivel 'info' del logger, pero el SocketIoTransport seguirá emitiendo 'info'
 
     const userDataManager = new UserDataManager(logger);
 
@@ -1105,15 +1177,6 @@ async function main() {
     app.use(express.json()); // Parsear cuerpo de solicitud JSON
     app.use(express.static(path.join(__dirname, 'public'))); // Servir archivos estáticos
     
-    // Declaración de server e io
-    const server = http.createServer(app);
-    const io = new Server(server, {
-        cors: {
-            origin: '*',
-            methods: ['GET', 'POST'],
-        },
-    });
-
     // Obtener la API Key de bptimer: prioridad ENV -> keytar (OS secure store) -> build-config.js (empaquetado) -> settings.json
     let bptimerApiKey = process.env.BPTIMER_API_KEY || null;
     if (!bptimerApiKey) {
@@ -1128,6 +1191,31 @@ async function main() {
             }
         } catch (e) {
             // keytar no disponible o fallo: ignorar
+        }
+    }
+
+    // Si aún no tenemos la key, intentar desde build-config.js (inyectada en tiempo de empaquetado)
+    // Si aún no tenemos la key, intentar desde un archivo privado empaquetado (ej: ./private/bptimer.json)
+    // Esto permite inyectar la clave durante el proceso de empaquetado sin dejarla en el repositorio.
+    if (!bptimerApiKey) {
+        try {
+            const privatePath = path.join(__dirname, 'private', 'bptimer.json');
+            if (fs.existsSync(privatePath)) {
+                try {
+                    const raw = fs.readFileSync(privatePath, 'utf8');
+                    const obj = JSON.parse(raw || '{}');
+                    // soportar varias claves posibles en el JSON
+                    const candidate = obj.BPTIMER_API_KEY || obj.bptimerApiKey || obj.api_key || obj.apiKey || null;
+                    if (candidate) {
+                        bptimerApiKey = candidate;
+                        logger.info('BPTimer API key cargada desde private/bptimer.json (paquetada).');
+                    }
+                } catch (e) {
+                    logger.warn('Error leyendo private/bptimer.json: ' + e.message);
+                }
+            }
+        } catch (e) {
+            // ignore
         }
     }
 
@@ -1185,6 +1273,25 @@ async function main() {
         bptimerEnabled: bptimerEnabled, // Pasar el estado del switch de bptimer
     });
 
+    // Log final state of API key for debugging
+    if (bptimerApiKey) {
+        logger.info('[BPTimer] API Key initialized (do not log key to avoid exposure)');
+    } else {
+        logger.error('[BPTimer] No API Key found! BPTimer reports will fail with 403 errors. Please ensure BPTIMER_API_KEY is set in .env, keytar, private/bptimer.json, or settings.json.');
+    }
+
+    // Emitir estado de inicialización a todos los clientes conectados
+    io.on('connection', (socket) => {
+        // Cuando un cliente se conecta, solo notificar si hay problemas
+        if (!bptimerApiKey) {
+            socket.emit('server_log', {
+                level: 'warn',
+                message: '[BPTimer] API Key status: NOT FOUND - BPTimer reports will fail',
+                timestamp: new Date().toISOString()
+            });
+        }
+    });
+
     // Guardar caché de usuario al salir del proceso
     process.on('SIGINT', async () => {
         console.log('\nGuardando caché de usuario...');
@@ -1219,6 +1326,7 @@ async function main() {
             code: 0,
             user: userData,
         };
+        io.emit('data', data); // Emitir también a través de socket.io
         res.json(data);
     });
 
@@ -1228,12 +1336,14 @@ async function main() {
             code: 0,
             enemy: enemiesData,
         };
+        io.emit('enemies', data); // Emitir también a través de socket.io
         res.json(data);
     });
 
     app.get('/api/clear', (req, res) => {
         userDataManager.clearAll();
         console.log('¡Estadísticas limpiadas!');
+        io.emit('clear_stats', { code: 0, msg: '¡Estadísticas limpiadas!' }); // Emitir también a través de socket.io
         res.json({
             code: 0,
             msg: '¡Estadísticas limpiadas!',
@@ -1255,6 +1365,7 @@ async function main() {
                 await fsPromises.unlink(logsDpsPath);
             }
             console.log('¡Todos los archivos y directorios de log han sido limpiados!');
+            io.emit('logs_cleared', { code: 0, msg: '¡Todos los archivos y directorios de log han sido limpiados!' }); // Emitir también a través de socket.io
             res.json({
                 code: 0,
                 msg: '¡Todos los archivos y directorios de log han sido limpiados!',
@@ -1262,12 +1373,14 @@ async function main() {
         } catch (error) {
             if (error.code === 'ENOENT') {
                 console.log('El directorio de logs no existe, no hay logs que limpiar.');
+                io.emit('logs_cleared', { code: 0, msg: 'El directorio de logs no existe, no hay logs que limpiar.' }); // Emitir también a través de socket.io
                 res.json({
                     code: 0,
                     msg: 'El directorio de logs no existe, no hay logs que limpiar.',
                 });
             } else {
                 logger.error('Failed to clear log files:', error);
+                io.emit('logs_clear_error', { code: 1, msg: 'Failed to clear log files.', error: error.message }); // Emitir también a través de socket.io
                 res.status(500).json({
                     code: 1,
                     msg: 'Failed to clear log files.',
@@ -1282,6 +1395,7 @@ async function main() {
         const { paused } = req.body;
         isPaused = paused;
         console.log(`¡Estadísticas ${isPaused ? 'pausadas' : 'reanudadas'}!`);
+        io.emit('pause_status', { code: 0, msg: `¡Estadísticas ${isPaused ? 'pausadas' : 'reanudadas'}!`, paused: isPaused }); // Emitir también a través de socket.io
         res.json({
             code: 0,
             msg: `¡Estadísticas ${isPaused ? 'pausadas' : 'reanudadas'}!`,
@@ -1291,6 +1405,7 @@ async function main() {
 
     // API para obtener estado de pausa
     app.get('/api/pause', (req, res) => {
+        io.emit('pause_status_request', { code: 0, paused: isPaused }); // Emitir también a través de socket.io
         res.json({
             code: 0,
             paused: isPaused,
@@ -1305,11 +1420,14 @@ async function main() {
             if (!isNaN(userId)) {
                 userDataManager.setName(userId, name);
                 console.log(`Manualmente se asignó el nombre '${name}' al UID ${userId}`);
+                io.emit('username_updated', { code: 0, msg: 'Nombre de usuario actualizado correctamente.', uid: userId, name: name }); // Emitir también a través de socket.io
                 res.json({ code: 0, msg: 'Nombre de usuario actualizado correctamente.' });
             } else {
+                io.emit('username_update_error', { code: 1, msg: 'UID inválido.' }); // Emitir también a través de socket.io
                 res.status(400).json({ code: 1, msg: 'UID inválido.' });
             }
         } else {
+            io.emit('username_update_error', { code: 1, msg: 'Faltan UID o nombre.' }); // Emitir también a través de socket.io
             res.status(400).json({ code: 1, msg: 'Faltan UID o nombre.' });
         }
     });
@@ -1320,12 +1438,14 @@ async function main() {
         const skillData = userDataManager.getUserSkillData(uid);
 
         if (!skillData) {
+            io.emit('skill_data_error', { code: 1, msg: 'User not found', uid: uid }); // Emitir también a través de socket.io
             return res.status(404).json({
                 code: 1,
                 msg: 'User not found',
             });
         }
 
+        io.emit('skill_data', { code: 0, data: skillData }); // Emitir también a través de socket.io
         res.json({
             code: 0,
             data: skillData,
@@ -1340,6 +1460,7 @@ async function main() {
         try {
             const data = await fsPromises.readFile(historyFilePath, 'utf8');
             const summaryData = JSON.parse(data);
+            io.emit('history_summary', { code: 0, data: summaryData }); // Emitir también a través de socket.io
             res.json({
                 code: 0,
                 data: summaryData,
@@ -1347,12 +1468,14 @@ async function main() {
         } catch (error) {
             if (error.code === 'ENOENT') {
                 logger.warn('History summary file not found:', error);
+                io.emit('history_summary_error', { code: 1, msg: 'History summary file not found', timestamp: timestamp }); // Emitir también a través de socket.io
                 res.status(404).json({
                     code: 1,
                     msg: 'History summary file not found',
                 });
             } else {
                 logger.error('Failed to read history summary file:', error);
+                io.emit('history_summary_error', { code: 1, msg: 'Failed to read history summary file', error: error.message, timestamp: timestamp }); // Emitir también a través de socket.io
                 res.status(500).json({
                     code: 1,
                     msg: 'Failed to read history summary file',
@@ -1369,6 +1492,7 @@ async function main() {
         try {
             const data = await fsPromises.readFile(historyFilePath, 'utf8');
             const userData = JSON.parse(data);
+            io.emit('history_data', { code: 0, user: userData }); // Emitir también a través de socket.io
             res.json({
                 code: 0,
                 user: userData,
@@ -1376,12 +1500,14 @@ async function main() {
         } catch (error) {
             if (error.code === 'ENOENT') {
                 logger.warn('History data file not found:', error);
+                io.emit('history_data_error', { code: 1, msg: 'History data file not found', timestamp: timestamp }); // Emitir también a través de socket.io
                 res.status(404).json({
                     code: 1,
                     msg: 'History data file not found',
                 });
             } else {
                 logger.error('Failed to read history data file:', error);
+                io.emit('history_data_error', { code: 1, msg: 'Failed to read history data file', error: error.message, timestamp: timestamp }); // Emitir también a través de socket.io
                 res.status(500).json({
                     code: 1,
                     msg: 'Failed to read history data file',
@@ -1398,6 +1524,7 @@ async function main() {
         try {
             const data = await fsPromises.readFile(historyFilePath, 'utf8');
             const skillData = JSON.parse(data);
+            io.emit('history_skill_data', { code: 0, data: skillData }); // Emitir también a través de socket.io
             res.json({
                 code: 0,
                 data: skillData,
@@ -1405,12 +1532,14 @@ async function main() {
         } catch (error) {
             if (error.code === 'ENOENT') {
                 logger.warn('History skill file not found:', error);
+                io.emit('history_skill_data_error', { code: 1, msg: 'History skill file not found', timestamp: timestamp, uid: uid }); // Emitir también a través de socket.io
                 res.status(404).json({
                     code: 1,
                     msg: 'History skill file not found',
                 });
             } else {
                 logger.error('Failed to read history skill file:', error);
+                io.emit('history_skill_data_error', { code: 1, msg: 'Failed to read history skill file', error: error.message, timestamp: timestamp, uid: uid }); // Emitir también a través de socket.io
                 res.status(500).json({
                     code: 1,
                     msg: 'Failed to read history skill file',
@@ -1423,6 +1552,7 @@ async function main() {
     app.get('/api/history/:timestamp/download', async (req, res) => {
         const { timestamp } = req.params;
         const historyFilePath = path.join('./logs', timestamp, 'fight.log');
+        io.emit('history_download', { code: 0, msg: `Descargando fight_${timestamp}.log` }); // Emitir también a través de socket.io
         res.download(historyFilePath, `fight_${timestamp}.log`);
     });
 
@@ -1432,6 +1562,7 @@ async function main() {
             const data = (await fsPromises.readdir('./logs', { withFileTypes: true }))
                 .filter((e) => e.isDirectory() && /^\d+$/.test(e.name))
                 .map((e) => e.name);
+            io.emit('history_list', { code: 0, data: data }); // Emitir también a través de socket.io
             res.json({
                 code: 0,
                 data: data,
@@ -1439,12 +1570,14 @@ async function main() {
         } catch (error) {
             if (error.code === 'ENOENT') {
                 logger.warn('History path not found:', error);
+                io.emit('history_list_error', { code: 1, msg: 'History path not found' }); // Emitir también a través de socket.io
                 res.status(404).json({
                     code: 1,
                     msg: 'History path not found',
                 });
             } else {
                 logger.error('Failed to load history path:', error);
+                io.emit('history_list_error', { code: 1, msg: 'Failed to load history path', error: error.message }); // Emitir también a través de socket.io
                 res.status(500).json({
                     code: 1,
                     msg: 'Failed to load history path',
@@ -1455,6 +1588,7 @@ async function main() {
 
     // Interfaz de configuración
     app.get('/api/settings', async (req, res) => {
+        io.emit('settings_data', { code: 0, data: globalSettings }); // Emitir también a través de socket.io
         res.json({ code: 0, data: globalSettings });
     });
 
@@ -1462,6 +1596,7 @@ async function main() {
         const newSettings = req.body;
         globalSettings = { ...globalSettings, ...newSettings };
         await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 2), 'utf8');
+        io.emit('settings_updated', { code: 0, data: globalSettings }); // Emitir también a través de socket.io
         res.json({ code: 0, data: globalSettings });
     });
 
@@ -1472,15 +1607,52 @@ async function main() {
             bptimerEnabled = enabled;
             packetProcessor.setBptimerEnabled(bptimerEnabled); // Actualizar el estado en PacketProcessor
             console.log(`Envío a BPTimer ${bptimerEnabled ? 'habilitado' : 'deshabilitado'}.`);
+            io.emit('bptimer_toggle_status', { code: 0, msg: `Envío a BPTimer ${bptimerEnabled ? 'habilitado' : 'deshabilitado'}.`, bptimerEnabled: bptimerEnabled }); // Emitir también a través de socket.io
             res.json({ code: 0, msg: `Envío a BPTimer ${bptimerEnabled ? 'habilitado' : 'deshabilitado'}.`, bptimerEnabled: bptimerEnabled });
         } else {
+            io.emit('bptimer_toggle_error', { code: 1, msg: 'El parámetro "enabled" debe ser un booleano.' }); // Emitir también a través de socket.io
             res.status(400).json({ code: 1, msg: 'El parámetro "enabled" debe ser un booleano.' });
         }
     });
 
     // API para obtener el estado actual de bptimerEnabled
     app.get('/api/bptimer-status', (req, res) => {
+        io.emit('bptimer_status', { code: 0, bptimerEnabled: bptimerEnabled }); // Emitir también a través de socket.io
         res.json({ code: 0, bptimerEnabled: bptimerEnabled });
+    });
+
+    // API para resetear la cache del cliente BPTimer para un monster específico (útil para pruebas)
+    app.post('/api/bptimer-reset', async (req, res) => {
+        const { monster_id, line } = req.body || {};
+        if (!packetProcessor || !packetProcessor.bptimerClient) {
+            res.status(500).json({ code: 1, msg: 'BPTimer client not initialized' });
+            return;
+        }
+        try {
+            packetProcessor.bptimerClient.resetMonster(monster_id, line);
+            io.emit('bptimer_reset', { code: 0, msg: 'Reset OK', monster_id, line });
+            res.json({ code: 0, msg: 'Reset OK', monster_id, line });
+        } catch (e) {
+            io.emit('bptimer_reset', { code: 1, msg: 'Reset failed', error: e && e.message ? e.message : e });
+            res.status(500).json({ code: 1, msg: 'Reset failed', error: e && e.message ? e.message : e });
+        }
+    });
+
+    // API para forzar un reporte a BPTimer (evita la caché interna). Útil para pruebas.
+    app.post('/api/bptimer-force-report', async (req, res) => {
+        const payload = req.body || {};
+        if (!packetProcessor || !packetProcessor.bptimerClient) {
+            res.status(500).json({ code: 1, msg: 'BPTimer client not initialized' });
+            return;
+        }
+        try {
+            const result = await packetProcessor.bptimerClient.reportHP(payload);
+            io.emit('bptimer_force_report', { code: 0, result });
+            res.json({ code: 0, result });
+        } catch (e) {
+            io.emit('bptimer_force_report', { code: 1, error: e && e.message ? e.message : e });
+            res.status(500).json({ code: 1, error: e && e.message ? e.message : e });
+        }
     });
 
     // Nueva API para alternar autoClearOnServerChange
@@ -1488,6 +1660,7 @@ async function main() {
         const { value } = req.body;
         globalSettings.autoClearOnServerChange = value;
         await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 2), 'utf8');
+        io.emit('clear_on_server_change_status', { code: 0, data: globalSettings.autoClearOnServerChange }); // Emitir también a través de socket.io
         res.json({ code: 0, data: globalSettings.autoClearOnServerChange });
     });
 
@@ -1497,16 +1670,20 @@ async function main() {
         try {
             const data = await fsPromises.readFile(diccionarioPath, 'utf8');
             if (data.trim() === '') { // Si el archivo está vacío
+                io.emit('diccionario_data', {}); // Emitir también a través de socket.io
                 res.json({});
             } else {
+                io.emit('diccionario_data', JSON.parse(data)); // Emitir también a través de socket.io
                 res.json(JSON.parse(data));
             }
         } catch (error) {
             if (error.code === 'ENOENT') {
                 logger.warn('diccionario.json not found, returning empty object.');
+                io.emit('diccionario_data', {}); // Emitir también a través de socket.io
                 res.json({}); // Si el archivo no existe, devuelve un objeto vacío
             } else {
                 logger.error('Failed to read or parse diccionario.json:', error);
+                io.emit('diccionario_error', { code: 1, msg: 'Failed to load diccionario', error: error.message }); // Emitir también a través de socket.io
                 res.status(500).json({ code: 1, msg: 'Failed to load diccionario', error: error.message });
             }
         }
@@ -1524,6 +1701,7 @@ async function main() {
         }
         logs.unshift(log); // Agrega el log más reciente al principio
         fs.writeFileSync(logsPath, JSON.stringify(logs, null, 2));
+        io.emit('dps_log_saved', log); // Emitir también a través de socket.io
     }
 
     app.post('/guardar-log-dps', (req, res) => {
@@ -1537,6 +1715,7 @@ async function main() {
         if (fs.existsSync(logsPath)) {
             logs = JSON.parse(fs.readFileSync(logsPath, 'utf8'));
         }
+        io.emit('dps_logs', logs); // Emitir también a través de socket.io
         res.json(logs);
     });
 
@@ -1555,14 +1734,17 @@ async function main() {
         if (!globalSettings.autoClearOnServerChange || userDataManager.lastLogTime === 0 || userDataManager.users.size === 0) return;
         userDataManager.clearAll();
         console.log('¡Servidor cambiado, estadísticas limpiadas!');
+        io.emit('server_change_clear', { msg: '¡Servidor cambiado, estadísticas limpiadas!' }); // Emitir también a través de socket.io
     };
 
     // Manejo de conexión WebSocket
     io.on('connection', (socket) => {
         console.log('Cliente WebSocket conectado: ' + socket.id);
+        io.emit('client_connected', { id: socket.id, msg: 'Cliente WebSocket conectado' }); // Emitir también a través de socket.io
 
         socket.on('disconnect', () => {
             console.log('Cliente WebSocket desconectado: ' + socket.id);
+            io.emit('client_disconnected', { id: socket.id, msg: 'Cliente WebSocket desconectado' }); // Emitir también a través de socket.io
         });
     });
 
@@ -1583,6 +1765,7 @@ async function main() {
         const localUrl = `http://localhost:${server_port}`;
         console.log(`Servidor web iniciado en ${localUrl}. Puedes acceder desde esta PC usando ${localUrl}/index.html o desde otra PC usando http://[TU_IP_LOCAL]:${server_port}/index.html`);
         console.log('Servidor WebSocket iniciado');
+        io.emit('server_started', { url: localUrl, msg: 'Servidor web y WebSocket iniciado' }); // Emitir también a través de socket.io
 
         // No abrir el navegador automáticamente, Electron se encargará de esto.
         // La URL se imprimirá en la consola para que Electron pueda capturarla.
@@ -1590,6 +1773,7 @@ async function main() {
 
     console.log('¡Bienvenido a BPSR Meter!');
     console.log('Detectando servidor de juego, por favor espera...');
+    io.emit('app_status', { msg: '¡Bienvenido a BPSR Meter! Detectando servidor de juego, por favor espera...' }); // Emitir también a través de socket.io
 
     let current_server = '';
     let _data = Buffer.alloc(0);
@@ -1732,6 +1916,7 @@ async function main() {
                                     tcp_next_seq = tcpPacket.info.seqno + buf.length;
                                     clearDataOnServerChange();
                                     console.log('Servidor de juego detectado. Midiendo DPS...');
+                                    io.emit('server_detected', { msg: 'Servidor de juego detectado. Midiendo DPS...' }); // Emitir también a través de socket.io
                                 }
                             } catch (e) {}
                         } while (data1 && data1.length);
@@ -1758,6 +1943,7 @@ async function main() {
                             tcp_next_seq = tcpPacket.info.seqno + buf.length;
                             clearDataOnServerChange();
                             console.log('Servidor de juego detectado por paquete de inicio de sesión. Midiendo DPS...');
+                            io.emit('server_detected', { msg: 'Servidor de juego detectado por paquete de inicio de sesión. Midiendo DPS...' }); // Emitir también a través de socket.io
                         }
                     }
                 }
@@ -1769,6 +1955,7 @@ async function main() {
         // Aquí ya son paquetes del servidor identificado
         if (tcp_next_seq === -1) {
             logger.error('Unexpected TCP capture error! tcp_next_seq is -1');
+            io.emit('tcp_error', { msg: 'Unexpected TCP capture error! tcp_next_seq is -1' }); // Emitir también a través de socket.io
             if (buf.length > 4 && buf.readUInt32BE() < 0x0fffff) {
                 tcp_next_seq = tcpPacket.info.seqno;
             }
@@ -1797,6 +1984,7 @@ async function main() {
                 packetProcessor.processPacket(packet); // Usar la instancia existente
             } else if (packetSize > 0x0fffff) {
                 logger.error(`Invalid Length!! ${_data.length},${len},${_data.toString('hex')},${tcp_next_seq}`);
+                io.emit('packet_error', { msg: `Invalid Length!! ${_data.length},${len},${_data.toString('hex')},${tcp_next_seq}` }); // Emitir también a través de socket.io
                 process.exit(1);
                 break;
             }
@@ -1826,10 +2014,12 @@ async function main() {
         }
         if (clearedFragments > 0) {
             logger.debug(`Cleared ${clearedFragments} expired IP fragment caches`);
+            io.emit('cleared_fragments', { count: clearedFragments, msg: `Cleared ${clearedFragments} expired IP fragment caches` }); // Emitir también a través de socket.io
         }
 
         if (tcp_last_time && Date.now() - tcp_last_time > FRAGMENT_TIMEOUT) {
             logger.warn('Cannot capture the next packet! Is the game closed or disconnected? seq: ' + tcp_next_seq);
+            io.emit('tcp_warning', { msg: 'Cannot capture the next packet! Is the game closed or disconnected?', seq: tcp_next_seq }); // Emitir también a través de socket.io
             current_server = '';
             clearTcpCache();
         }
@@ -1838,6 +2028,7 @@ async function main() {
 
 if (!zlib.zstdDecompressSync) {
     print('zstdDecompressSync is not available! Please update your Node.js!');
+    io.emit('zstd_error', { msg: 'zstdDecompressSync is not available! Please update your Node.js!' }); // Emitir también a través de socket.io
     process.exit(1);
 }
 

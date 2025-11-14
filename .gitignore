@@ -42,3 +42,6 @@ public/build-config.js
 
 # Carpeta 'ignore'
 ignore/
+
+# Local private secrets included during packaging (do NOT commit)
+private/

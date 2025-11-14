@@ -108,8 +108,8 @@ function promoteOverlayWindow(win, { focus = false } = {}) {
         logToFile('Puerto disponible encontrado: ' + server_port);
 
         mainWindow = new BrowserWindow({
-            width: 650,
-            height: 600,
+            width: 667,
+            height: 300,
             transparent: true,
             frame: false,
             alwaysOnTop: true,
@@ -241,6 +241,13 @@ function promoteOverlayWindow(win, { focus = false } = {}) {
     ipcMain.on('set-window-movable', (event, movable) => {
         if (mainWindow) {
             mainWindow.setMovable(movable);
+        }
+    });
+
+    // Manejar el evento para minimizar la ventana
+    ipcMain.on('minimize-window', () => {
+        if (mainWindow) {
+            mainWindow.minimize();
         }
     });
 

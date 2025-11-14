@@ -833,6 +833,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                 </label>
                 <img src="BPTimer.svg" alt="BPTimer Icon" class="bptimer-icon" title="World Boss HP Data For bptimer.con">
             </div>
+            <button class="control-button" id="minimize-button" title="Minimizar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-window-minimize"></i></button>
             <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
         </header>
         <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
@@ -843,6 +844,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     </div>
 
 <script>
+
+// Crear un socket global temprano para capturar logs del servidor incluso antes de DOMContentLoaded
+if (!window.__socket) {
+    try {
+        window.__socket = io();
+        window.__socket.on('connect', () => console.log('Conectado al servidor Socket.IO'));
+        window.__socket.on('disconnect', () => console.log('Desconectado del servidor Socket.IO'));
+        window.__socket.on('server_log', (logData) => {
+            try {
+                const level = (logData.level || 'info').toString().toLowerCase();
+                const ts = logData.timestamp || new Date().toISOString();
+                const msg = logData.message || '';
+                const label = `[SERVER_LOG] [${level.toUpperCase()}]`;
+                if (level === 'warn' || level === 'warning') console.warn(`${label} ${msg}`, ts);
+                else if (level === 'error') console.error(`${label} ${msg}`, ts);
+                else console.info(`${label} ${msg}`, ts);
+                // También mostrar el objeto crudo para depuración
+                console.debug('[SERVER_LOG RAW]', logData);
+            } catch (e) {
+                console.log('[SERVER_LOG] (parse error)', logData);
+            }
+        });
+    } catch (e) {
+        // fallo al inicializar socket (por ejemplo io no está cargado aún)
+        console.warn('No se pudo inicializar socket global:', e.message || e);
+    }
+}
 
 // Estado global para modo Lite
 let isLiteMode = false;
@@ -1033,6 +1061,15 @@ const professionMap = {
             }
         }
 
+        const minimizeButton = document.getElementById('minimize-button');
+        if (minimizeButton) {
+            minimizeButton.addEventListener('click', () => {
+                if (window.electronAPI) {
+                    window.electronAPI.minimizeWindow();
+                }
+            });
+        }
+
         const closeButton = document.getElementById('close-button');
         if (closeButton) {
             closeButton.addEventListener('click', () => {
@@ -1049,26 +1086,34 @@ const professionMap = {
         });
     }
 
-    // Conexión de Socket.IO
-    const socket = io(); // Asumiendo que `io` está disponible globalmente desde el script de socket.io
+    // Reutilizar el socket global creado más arriba
+    const socket = window.__socket || null;
 
-    socket.on('connect', () => {
-        console.log('Conectado al servidor Socket.IO');
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Desconectado del servidor Socket.IO');
-    });
-
-    socket.on('data', (data) => {
+    socket?.on('data', (data) => {
         // Lógica existente para actualizar el medidor de DPS
         // ... (el código de fetchDataAndRender ya maneja esto)
     });
 
     // Escuchar el evento 'player_info' para mostrar en la consola del navegador
     socket.on('player_info', (data) => {
-        console.log(`[PLAYER_INFO] UID: ${data.uid}, Line: ${data.line}, Position:`, data.position);
+        console.log(`[PLAYER_INFO] UID: ${data.uid}, Line: ${data.line}, Position:`, data.position, `IsLocal: ${data.isLocalPlayer}`);
+        if (data.isLocalPlayer) {
+            localPlayerUid = data.uid;
+            console.log(`[FRONTEND] localPlayerUid establecido a: ${localPlayerUid}`);
+        }
     });
+
+    socket.on('local_player_entity_info', (data) => {
+        console.log(`[LOCAL_PLAYER_ENTITY_INFO] UID: ${data.uid}, IsLocal: ${data.isLocalPlayer}`);
+        if (data.isLocalPlayer) {
+            localPlayerUid = data.uid;
+            console.log(`[FRONTEND] localPlayerUid establecido a: ${localPlayerUid}`);
+        }
+    });
+
+    // Nota: los logs del servidor ya se manejan por el socket global inicializado antes de DOMContentLoaded
+    // Aquí mantenemos el listener local por compatibilidad (se ignora si ya fue registrado globalmente).
+    // No agregamos una segunda lógica para evitar duplicados.
 
     // Lógica para el switch de BPTimer
     const bptimerSwitch = document.getElementById('bptimer-switch');
@@ -1401,6 +1446,7 @@ const professionMap = {
 
             if (isLiteMode) {
                 container.innerHTML = userArray.map((u, index) => {
+                    console.log(`[FRONTEND - LITE] Procesando jugador: ID=${u.id}, Nombre=${u.name}, localPlayerUid=${localPlayerUid}, EsLocal=${u.id === localPlayerUid}`);
                     const professionParts = u.profession.split('-');
                     const mainProfessionKey = professionParts[0];
                     const subProfessionKey = professionParts[1];
@@ -1425,7 +1471,7 @@ const professionMap = {
                         value2 = `${Math.round(u.healingPercent)}%`; // Porcentaje de contribución de heal
                     }
 
-                    const localPlayerIcon = (localPlayerUid !== null && u.id === localPlayerUid) ? '<i class="fa-solid fa-star" style="color: #00aaff; margin-right: 5px;"></i>' : '';
+                    const localPlayerIcon = (localPlayerUid !== null && u.id === localPlayerUid) ? '<span style="margin-right: 5px;">👤</span>' : '';
 
                     return `<div class="lite-bar" data-lite="true" data-rank="${u.rank}">
                         <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground};"></div>
@@ -1444,6 +1490,7 @@ const professionMap = {
             } else {
                 // ...renderizado original...
                 container.innerHTML = userArray.map((u, index) => {
+                    console.log(`[FRONTEND - ADVANCED] Procesando jugador: ID=${u.id}, Nombre=${u.name}, localPlayerUid=${localPlayerUid}, EsLocal=${u.id === localPlayerUid}`);
                     const professionParts = u.profession.split('-');
                     const mainProfessionKey = professionParts[0];
                     const subProfessionKey = professionParts[1];
@@ -1463,7 +1510,7 @@ const professionMap = {
                     const crit = (u.total_count.critical !== undefined && totalHits > 0) ? Math.round((u.total_count.critical / totalHits) * 100) : '0';
                     const lucky = (u.total_count.lucky !== undefined && totalHits > 0) ? Math.round((u.total_count.lucky / totalHits) * 100) : '0';
                     const peak = (u.realtime_dps_max !== undefined) ? u.realtime_dps_max : 0;
-                    const localPlayerIcon = (localPlayerUid !== null && u.id === localPlayerUid) ? '<i class="fa-solid fa-star" style="color: #00aaff; margin-right: 5px;"></i>' : '';
+                    const localPlayerIcon = (localPlayerUid !== null && u.id === localPlayerUid) ? '<span style="margin-right: 5px;">👑</span>' : '';
                     return `<div class="player-bar" data-rank="${u.rank}">
                         <div class="progress-fill" style="width: ${u.damagePercent}%; background: ${dpsColor}"></div>
                         <div class="bar-content">

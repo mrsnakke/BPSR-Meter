@@ -16,6 +16,148 @@ const BPTIMER_QUEUE_TTL_MS = 24 * 60 * 60 * 1000; // TTL por item: 24 horas
 
 const monsterNames = require('../tables/monster_names.json');
 
+// IDs permitidos para enviar a BPTimer (usar solo estos template IDs)
+const ALLOWED_BPTIMER_MOB_IDS = new Set([
+    10007,10009,10010,10018,10029,10032,10056,10059,10069,10077,10081,10084,10085,10086,10900,10901,10902,10903,10904
+]);
+
+// Nombre preferido para algunos template ids (override si difiere de tables/monster_names.json)
+// Estos son los nombres exactos que queremos reportar a BPTimer
+const MOB_NAME_OVERRIDES = {
+    10007: 'Storm Goblin King',
+    10009: 'Frost Ogre',
+    10010: 'Tempest Ogre',
+    10018: 'Inferno Ogre',
+    10029: 'Muku King',
+    10032: 'Golden Juggernaut',
+    10056: 'Brigand Leader',
+    10059: 'Muku Chief',
+    10069: 'Phantom Arachnocrab',
+    10077: 'Venobzzar Incubator',
+    10081: 'Iron Fang',
+    10084: 'Celestial Flier',
+    10085: 'Lizardman King',
+    10086: 'Goblin King',
+    10900: 'Golden Nappo',
+    10901: 'Silver Nappo',
+    10902: 'Lovely Boarlet'
+};
+
+// Subconjunto de mobs para los que BPTimer requiere posición (coincide con bptimer-api-client/src/constants.ts)
+const LOCATION_TRACKED_BPTIMER_MOBS = new Set([10900, 10901, 10904]);
+
+/**
+ * Utility class para manejar UUIDs
+ */
+class UUIDHelper {
+  /**
+   * Extrae información de un UUID
+   * @param {Long/BigInt} uuid - UUID del protocolo
+   * @returns {Object} { playerId, entityType, isPlayer, isMonster, isBoss }
+   */
+  static parseUUID(uuid) {
+    const playerId = uuid.shiftRight(16).toNumber();
+    const entityType = uuid.toNumber() & 0xFFFF;
+    
+    return {
+      uuid: uuid.toString(),
+      playerId,
+      entityType,
+      isPlayer: entityType === 640,
+      isMonster: entityType === 64 || entityType === 32,
+      isBoss: entityType === 65,
+      typeString: this.getEntityTypeName(entityType)
+    };
+  }
+  
+  static getEntityTypeName(entityType) {
+    const typeMap = {
+      640: 'Player',
+      32: 'WeakMonster',
+      64: 'Monster',
+      65: 'Boss'
+    };
+    return typeMap[entityType] || `Unknown(${entityType})`;
+  }
+  
+  /**
+   * Compara dos UUIDs
+   */
+  static equals(uuid1, uuid2) {
+    if (!uuid1 || !uuid2) return false;
+    return uuid1.eq ? uuid1.eq(uuid2) : uuid1 === uuid2;
+  }
+}
+
+/**
+ * Rastreador del UUID local del jugador
+ */
+class LocalPlayerTracker {
+  constructor(logger) {
+    this.logger = logger;
+    this.uuid = null;
+    this.playerId = null;
+    this.uuidChangeCallbacks = [];
+    this.firstDetectionTime = null;
+  }
+  
+  /**
+   * Actualiza el UUID si cambió
+   * @returns {boolean} true si hubo cambio
+   */
+  updateUUID(newUuid) {
+    if (this.uuid && UUIDHelper.equals(this.uuid, newUuid)) {
+      return false; // Sin cambios
+    }
+    
+    const oldPlayerId = this.playerId;
+    this.uuid = newUuid;
+    this.playerId = newUuid.shiftRight(16).toNumber();
+    
+    if (!this.firstDetectionTime) {
+      this.firstDetectionTime = Date.now();
+      this.logger.info(`🎮 Local player detected! ID: ${this.playerId}`);
+    } else if (oldPlayerId !== this.playerId) {
+      this.logger.warn(`⚠️ Player ID changed from ${oldPlayerId} to ${this.playerId}`);
+      // Esto puede indicar desconexión/reconexión
+    }
+    
+    // Notificar cambios
+    this._notifyCallbacks();
+    return true;
+  }
+  
+  /**
+   * Verifica si es el jugador local
+   */
+  isLocalPlayer(playerId) {
+    return this.playerId !== null && this.playerId === playerId;
+  }
+  
+  /**
+   * Obtiene información del jugador local
+   */
+  getInfo() {
+    if (!this.uuid) return null;
+    return {
+      ...UUIDHelper.parseUUID(this.uuid),
+      firstDetectedAt: new Date(this.firstDetectionTime)
+    };
+  }
+  
+  /**
+   * Registra callback para cambios de UUID
+   */
+  onChange(callback) {
+    this.uuidChangeCallbacks.push(callback);
+  }
+  
+  _notifyCallbacks() {
+    const info = this.getInfo();
+    this.uuidChangeCallbacks.forEach(cb => cb(info));
+  }
+}
+
 class BinaryReader {
     constructor(buffer, offset = 0) {
         this.buffer = buffer;
@@ -236,14 +378,7 @@ const getDamageSource = (damageSource) => {
     }
 };
 
-const isUuidPlayer = (uuid) => {
-    return (uuid.toBigInt() & 0xffffn) === 640n;
-};
-
-const isUuidMonster = (uuid) => {
-    const low = uuid.toBigInt() & 0xffffn;
-    return low === 64n || low === 32832n;
-};
+// Las funciones isUuidPlayer y isUuidMonster ya no son necesarias, se usará UUIDHelper
 
 const doesStreamHaveIdentifier = (reader) => {
     let identifier = reader.readUInt32LE();
@@ -263,25 +398,20 @@ const streamReadString = (reader) => {
     return buffer.toString();
 };
 
-let currentUserUuid = Long.ZERO;
+// let currentUserUuid = Long.ZERO; // Ya no es necesario, lo manejará LocalPlayerTracker
 
 // Safe loader for BPTimerClient: try normal require, then a direct CJS bundle require,
 // and finally fall back to dynamic import (async). This prevents startup crash when
 // the package is published as ESM-only and the app uses CommonJS require.
 let BPTimerClient = null;
 try {
-    // Preferred: package provides a CJS entry or exports.require mapping
+    // Intenta cargar el módulo directamente.
     const mod = require('@woheedev/bptimer-api-client');
     BPTimerClient = mod && (mod.BPTimerClient || mod.default || mod);
-} catch (e1) {
-    try {
-        // Fallback: try to require the known CJS bundle path inside the package
-        const mod2 = require('@woheedev/bptimer-api-client/dist/cjs/index.js');
-        BPTimerClient = mod2 && (mod2.BPTimerClient || mod2.default || mod2);
-    } catch (e2) {
-        // Leave BPTimerClient null for now; we'll attempt async dynamic import later when needed
-        BPTimerClient = null;
-    }
+} catch (e) {
+    // Si falla, BPTimerClient permanecerá nulo y se intentará la importación dinámica más tarde.
+    // Esto es para manejar casos donde el paquete es ESM-only en un contexto CommonJS.
+    BPTimerClient = null;
 }
 
 // Función auxiliar para extraer posición desde un AttrCollection
@@ -346,6 +476,43 @@ class PacketProcessor {
         this.io = io; // Guardar la instancia de socket.io
         this.bptimerEnabled = bptimerEnabled; // Estado inicial del switch de BPTimer
 
+        // Inicializar trackers
+        this.localPlayerTracker = new LocalPlayerTracker(logger);
+        // this.teamManager = new TeamManager(logger); // Se agregará en un paso posterior
+
+        // Setupear listeners
+        this.localPlayerTracker.onChange((info) => {
+            this.logger.info(`📍 Local player: ${info.playerId}`);
+            if (this.onLocalPlayerUidDetected) {
+                this.onLocalPlayerUidDetected(info.playerId);
+            }
+        });
+
+        // Cola para reportes a BPTimer cuando el cliente no esté listo aún
+        this._bptimerQueue = [];
+        this._bptimerInitializing = false;
+        // Intentar cargar cola persistente desde disco
+        try {
+            if (fs.existsSync(BPTIMER_QUEUE_FILE)) {
+                const raw = fs.readFileSync(BPTIMER_QUEUE_FILE, 'utf8');
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr)) {
+                    // Normalizar (soportar formatos antiguos donde se guardaba sólo payload)
+                    const now = Date.now();
+                    this._bptimerQueue = arr.map(item => {
+                        if (item && item.payload !== undefined && item.ts !== undefined) return item;
+                        // formato antiguo: item es payload directamente
+                        return { payload: item, ts: now };
+                    });
+                    this._pruneBPTimerQueue();
+                    this.logger.info(`Cargada cola de BPTimer desde disco: ${this._bptimerQueue.length} items`);
+                }
+            }
+        } catch (e) {
+            this.logger.warn('No se pudo cargar cola persistente de BPTimer: ' + e.message);
+            this._bptimerQueue = [];
+        }
+
         // Cola para reportes a BPTimer cuando el cliente no esté listo aún
         this._bptimerQueue = [];
         this._bptimerInitializing = false;
@@ -374,6 +541,8 @@ class PacketProcessor {
         // Inicializar enemyCache.hp_pct y enemyCache.pos si no existen
         this.userDataManager.enemyCache.hp_pct = this.userDataManager.enemyCache.hp_pct || new Map();
         this.userDataManager.enemyCache.pos = this.userDataManager.enemyCache.pos || new Map();
+    // Guardar template id (AttrId) si está disponible
+    this.userDataManager.enemyCache.id = this.userDataManager.enemyCache.id || new Map();
 
         // Inicializar BPTimerClient si se proporciona una clave API
         if (bptimerApiKey) {
@@ -386,9 +555,35 @@ class PacketProcessor {
                             info: (message) => this.logger.info(`[BPTimerClient] ${message}`),
                             debug: (message) => this.logger.debug(`[BPTimerClient] ${message}`)
                         },
-                        log_level: 'info' // Puedes cambiar a 'debug' para más logs
+                        log_level: 'debug' // Cambiado a 'debug' para más logs
                     });
-                    this.logger.info('BPTimerClient inicializado.');
+                    this.logger.info('BPTimerClient inicializado con API Key (no se muestra la clave completa).');
+                    // Test connection right after initialization to verify API key/endpoint
+                    if (typeof this.bptimerClient.testConnection === 'function') {
+                        this.bptimerClient.testConnection().then(r => {
+                            const msg = `[BPTimerClient] testConnection result: ${JSON.stringify(r)}`;
+                            this.logger.info(msg);
+                            // Emitir a navegador
+                            if (this.io) {
+                                this.io.emit('server_log', {
+                                    level: r && r.success ? 'info' : 'warn',
+                                    message: msg,
+                                    timestamp: new Date().toISOString()
+                                });
+                            }
+                        }).catch(e => {
+                            const msg = '[BPTimerClient] testConnection failed: ' + (e && e.message ? e.message : e);
+                            this.logger.warn(msg);
+                            // Emitir a navegador
+                            if (this.io) {
+                                this.io.emit('server_log', {
+                                    level: 'warn',
+                                    message: msg,
+                                    timestamp: new Date().toISOString()
+                                });
+                            }
+                        });
+                    }
                     // Si había reportes en cola, enviarlos
                     if (this._bptimerQueue.length > 0) this._flushBPTimerQueue();
                 } catch (err) {
@@ -415,9 +610,35 @@ class PacketProcessor {
                                 info: (message) => this.logger.info(`[BPTimerClient] ${message}`),
                                 debug: (message) => this.logger.debug(`[BPTimerClient] ${message}`)
                             },
-                            log_level: 'info'
+                            log_level: 'debug'
                         });
-                        this.logger.info('BPTimerClient inicializado vía import dinámico.');
+                        this.logger.info('BPTimerClient inicializado vía import dinámico con API Key (no se muestra la clave completa).');
+                        // Test connection after dynamic import
+                        if (typeof this.bptimerClient.testConnection === 'function') {
+                            this.bptimerClient.testConnection().then(r => {
+                                const msg = `[BPTimerClient] testConnection result: ${JSON.stringify(r)}`;
+                                this.logger.info(msg);
+                                // Emitir a navegador
+                                if (this.io) {
+                                    this.io.emit('server_log', {
+                                        level: r && r.success ? 'info' : 'warn',
+                                        message: msg,
+                                        timestamp: new Date().toISOString()
+                                    });
+                                }
+                            }).catch(e => {
+                                const msg = '[BPTimerClient] testConnection failed: ' + (e && e.message ? e.message : e);
+                                this.logger.warn(msg);
+                                // Emitir a navegador
+                                if (this.io) {
+                                    this.io.emit('server_log', {
+                                        level: 'warn',
+                                        message: msg,
+                                        timestamp: new Date().toISOString()
+                                    });
+                                }
+                            });
+                        }
                         // Import dinámico completado: enviar cualquier reporte pendiente
                         this._bptimerInitializing = false;
                         if (this._bptimerQueue.length > 0) this._flushBPTimerQueue();
@@ -507,9 +728,10 @@ class PacketProcessor {
         let targetUuid = aoiSyncDelta.Uuid;
         if (!targetUuid) return;
         const tgtUuid = targetUuid.toString();
-        const isTargetPlayer = isUuidPlayer(targetUuid);
-        const isTargetMonster = isUuidMonster(targetUuid);
-        targetUuid = targetUuid.shiftRight(16);
+        const targetUuidInfo = UUIDHelper.parseUUID(targetUuid); // Usar UUIDHelper
+        const isTargetPlayer = targetUuidInfo.isPlayer;
+        const isTargetMonster = targetUuidInfo.isMonster;
+        // targetUuid = targetUuid.shiftRight(16); // Ya no es necesario reasignar, usar targetUuidInfo.playerId
 
         const attrCollection = aoiSyncDelta.Attrs;
         if (attrCollection && attrCollection.Attrs) {
@@ -536,10 +758,12 @@ class PacketProcessor {
             if (!skillId) continue;
 
             let attackerUuid = syncDamageInfo.TopSummonerId || syncDamageInfo.AttackerUuid;
-            const atkUuid = attackerUuid.toString();
             if (!attackerUuid) continue;
-            const isAttackerPlayer = isUuidPlayer(attackerUuid);
-            attackerUuid = attackerUuid.shiftRight(16);
+            const attackerUuidInfo = UUIDHelper.parseUUID(attackerUuid); // Usar UUIDHelper
+            const atkUuid = attackerUuidInfo.uuid;
+            const isAttackerPlayer = attackerUuidInfo.isPlayer;
+            const attackerPlayerId = attackerUuidInfo.playerId;
+            // attackerUuid = attackerUuid.shiftRight(16); // Ya no es necesario reasignar
 
             const value = syncDamageInfo.Value;
             const luckyValue = syncDamageInfo.LuckyValue;
@@ -566,32 +790,32 @@ class PacketProcessor {
                 if (isHeal) {
                     //玩家被治疗
                     this.userDataManager.addHealing(
-                        isAttackerPlayer ? attackerUuid.toNumber() : 0,
+                        isAttackerPlayer ? attackerPlayerId : 0,
                         skillId,
                         damageElement,
                         damage.toNumber(),
                         isCrit,
                         isLucky,
                         isCauseLucky,
-                        targetUuid.toNumber(),
+                        targetUuidInfo.playerId, // Usar targetUuidInfo.playerId
                     );
                 } else {
                     //玩家受到伤害
-                    this.userDataManager.addTakenDamage(targetUuid.toNumber(), damage.toNumber(), isDead);
+                    this.userDataManager.addTakenDamage(targetUuidInfo.playerId, damage.toNumber(), isDead); // Usar targetUuidInfo.playerId
                 }
                 if (isDead) {
-                    this.userDataManager.setAttrKV(targetUuid.toNumber(), 'hp', 0);
+                    this.userDataManager.setAttrKV(targetUuidInfo.playerId, 'hp', 0); // Usar targetUuidInfo.playerId
                 }
             } else {
                 //非玩家目标
                 if (isHeal) {
-                    //非玩家被治疗
+                    //no jugador curado
                 } else {
-                    //非玩家受到伤害
+                    //no jugador dañado
                     if (isAttackerPlayer) {
-                        //只记录玩家造成的伤害
+                        // Registrar daño de todos los jugadores
                         this.userDataManager.addDamage(
-                            attackerUuid.toNumber(),
+                            attackerPlayerId,
                             skillId,
                             damageElement,
                             damage.toNumber(),
@@ -599,7 +823,7 @@ class PacketProcessor {
                             isLucky,
                             isCauseLucky,
                             hpLessenValue.toNumber(),
-                            targetUuid.toNumber(),
+                            targetUuidInfo.playerId, // Usar targetUuidInfo.playerId
                         );
                     }
                 }
@@ -618,30 +842,33 @@ class PacketProcessor {
 
             let infoStr = `SRC: `;
             if (isAttackerPlayer) {
-                const attacker = this.userDataManager.getUser(attackerUuid.toNumber());
+                const attacker = this.userDataManager.getUser(attackerPlayerId);
                 if (attacker.name) {
                     infoStr += attacker.name;
                 }
-                infoStr += `#${attackerUuid.toString()}(player)`;
+                infoStr += `#${attackerPlayerId}(player)`;
+                if (this.localPlayerTracker.isLocalPlayer(attackerPlayerId)) {
+                    infoStr += `(local)`;
+                }
             } else {
                 if (this.userDataManager.enemyCache.name.has(atkUuid)) {
                     infoStr += this.userDataManager.enemyCache.name.get(atkUuid);
                 }
-                infoStr += `#${attackerUuid.toString()}(enemy)`;
+                infoStr += `#${attackerPlayerId}(enemy)`;
             }
 
             let targetName = '';
             if (isTargetPlayer) {
-                const target = this.userDataManager.getUser(targetUuid.toNumber());
+                const target = this.userDataManager.getUser(targetUuidInfo.playerId); // Usar targetUuidInfo.playerId
                 if (target.name) {
                     targetName += target.name;
                 }
-                targetName += `#${targetUuid.toString()}(player)`;
+                targetName += `#${targetUuidInfo.playerId}(player)`; // Usar targetUuidInfo.playerId
             } else {
                 if (this.userDataManager.enemyCache.name.has(tgtUuid)) {
                     targetName += this.userDataManager.enemyCache.name.get(tgtUuid);
                 }
-                targetName += `#${targetUuid.toString()}(enemy)`;
+                targetName += `#${targetUuidInfo.playerId}(enemy)`; // Usar targetUuidInfo.playerId
             }
             infoStr += ` TGT: ${targetName}`;
 
@@ -677,14 +904,9 @@ class PacketProcessor {
 
         const aoiSyncToMeDelta = syncToMeDeltaInfo.DeltaInfo;
 
-        const uuid = aoiSyncToMeDelta.Uuid;
-        if (uuid && !currentUserUuid.eq(uuid)) {
-            currentUserUuid = uuid;
-            const localPlayerUid = currentUserUuid.shiftRight(16).toNumber();
-            this.logger.info('Got player UUID! UUID: ' + currentUserUuid + ' UID: ' + localPlayerUid);
-            if (this.onLocalPlayerUidDetected) {
-                this.onLocalPlayerUidDetected(localPlayerUid);
-            }
+        if (aoiSyncToMeDelta.Uuid) {
+            // Actualizar UUID local
+            this.localPlayerTracker.updateUUID(aoiSyncToMeDelta.Uuid);
         }
 
         const aoiSyncDelta = aoiSyncToMeDelta.BaseDelta;
@@ -766,9 +988,11 @@ class PacketProcessor {
             const playerInfo = {
                 uid: playerUid,
                 line: lineId != null ? lineId : (cachedUser && cachedUser.line != null ? cachedUser.line : null),
-                position: position
+                position: position,
+                isLocalPlayer: this.localPlayerTracker.isLocalPlayer(playerUid) // Añadir esta línea
             };
-            this.logger.info(`[PLAYER_INFO] UID: ${playerInfo.uid}, Line: ${playerInfo.line}, Position: X=${playerInfo.position ? playerInfo.position.x : 'N/A'}, Y=${playerInfo.position ? playerInfo.position.y : 'N/A'}, Z=${playerInfo.position ? playerInfo.position.z : 'N/A'}`);
+            this.logger.info(`[PLAYER_INFO] UID: ${playerInfo.uid}, Line: ${playerInfo.line}, Position: X=${playerInfo.position ? playerInfo.position.x : 'N/A'}, Y=${playerInfo.position ? playerInfo.position.y : 'N/A'}, Z=${playerInfo.position ? playerInfo.position.z : 'N/A'}, IsLocal: ${playerInfo.isLocalPlayer}`);
+            this.logger.info(`[PLAYER_INFO Debug] Line: ${playerInfo.line}, Position: ${JSON.stringify(playerInfo.position)}`);
             
             // Emitir la información al frontend a través de socket.io
             if (this.io) {
@@ -799,13 +1023,15 @@ class PacketProcessor {
             }
         } catch (err) {
             fs.writeFileSync('./SyncContainerData.dat', payloadBuffer);
-            this.logger.warn(`Failed to decode SyncContainerData for player ${currentUserUuid.shiftRight(16)}. Please report to developer`);
+            const playerIdentifier = this.localPlayerTracker.playerId ? this.localPlayerTracker.playerId.toString() : 'Unknown';
+            this.logger.warn(`Failed to decode SyncContainerData for player ${playerIdentifier}. Please report to developer`);
             throw err;
         }
     }
 
     _processSyncContainerDirtyData(payloadBuffer) {
-        if (currentUserUuid.isZero()) return;
+        const localPlayerInfo = this.localPlayerTracker.getInfo();
+        if (!localPlayerInfo || !localPlayerInfo.uuid) return; // No procesar si no hay jugador local
 
         const syncContainerDirtyData = pb.SyncContainerDirtyData.decode(payloadBuffer);
         if (!syncContainerDirtyData.VData || !syncContainerDirtyData.VData.Buffer) return;
@@ -826,12 +1052,12 @@ class PacketProcessor {
                     case 5: // Name
                         const playerName = streamReadString(messageReader);
                         if (!playerName || playerName === '') break;
-                        this.userDataManager.setName(currentUserUuid.shiftRight(16).toNumber(), playerName);
+                        this.userDataManager.setName(localPlayerInfo.playerId, playerName);
                         break;
                     case 35: // FightPoint
                         const fightPoint = messageReader.readUInt32LE();
                         messageReader.readInt32();
-                        this.userDataManager.setFightPoint(currentUserUuid.shiftRight(16).toNumber(), fightPoint);
+                        this.userDataManager.setFightPoint(localPlayerInfo.playerId, fightPoint);
                         break;
                     default:
                         // unhandle
@@ -846,11 +1072,11 @@ class PacketProcessor {
                 switch (fieldIndex) {
                     case 1: // CurHp
                         const curHp = messageReader.readUInt32LE();
-                        this.userDataManager.setAttrKV(currentUserUuid.shiftRight(16).toNumber(), 'hp', curHp);
+                        this.userDataManager.setAttrKV(localPlayerInfo.playerId, 'hp', curHp);
                         break;
                     case 2: // MaxHp
                         const maxHp = messageReader.readUInt32LE();
-                        this.userDataManager.setAttrKV(currentUserUuid.shiftRight(16).toNumber(), 'max_hp', maxHp);
+                        this.userDataManager.setAttrKV(localPlayerInfo.playerId, 'max_hp', maxHp);
                         break;
                     default:
                         // unhandle
@@ -867,7 +1093,7 @@ class PacketProcessor {
                         const curProfessionId = messageReader.readUInt32LE();
                         messageReader.readInt32();
                         if (curProfessionId)
-                            this.userDataManager.getUser(currentUserUuid.shiftRight(16).toNumber()).setMainProfession(getProfessionNameFromId(curProfessionId));
+                            this.userDataManager.getUser(localPlayerInfo.playerId).setMainProfession(getProfessionNameFromId(curProfessionId));
                         break;
                     default:
                         // unhandle
@@ -892,15 +1118,20 @@ class PacketProcessor {
                     const playerName = reader.string();
                     this.logger.debug(`_processPlayerAttrs: Setting player name for UID ${playerUid}: ${playerName}`);
                     this.userDataManager.setName(playerUid, playerName);
-                    break;
+                        this.userDataManager.enemyCache.id.set(enemyUuid, attrId);
                 case AttrType.AttrProfessionId:
                     const professionId = reader.int32();
                     const professionName = getProfessionNameFromId(professionId);
-                    this.logger.debug(`_processPlayerAttrs: Setting profession for UID ${playerUid}: ${professionName}`);
-                    this.userDataManager.getUser(playerUid).setMainProfession(professionName);
-                    break;
-                case AttrType.AttrFightPoint:
-                    const playerFightPoint = reader.int32();
+                    // Determinar nombre: override -> monster_names.json -> undefined
+                    const overrideName = MOB_NAME_OVERRIDES[attrId];
+                    const nameFromTable = monsterNames[attrId];
+                    const name = overrideName || nameFromTable;
+                    if (name) {
+                        this.logger.info(`Found moster name ${name} for templateId ${attrId} (instance ${enemyUid}) uuid ${enemyUuid}`);
+                        this.userDataManager.enemyCache.name.set(enemyUuid, name);
+                    } else {
+                        this.logger.debug(`Template id ${attrId} for instance ${enemyUid} has no known name in tables or overrides.`);
+                    }
                     this.userDataManager.setFightPoint(playerUid, playerFightPoint);
                     break;
                 case AttrType.AttrLevel:
@@ -959,9 +1190,16 @@ class PacketProcessor {
                     break;
                 case AttrType.AttrId:
                     const attrId = reader.int32();
+                    // attrId es el template id del monstruo (el que corresponde con tables/monster_names.json)
+                    // Guardarlo para que los reportes a BPTimer usen el template id en lugar del instance UID
+                    try {
+                        this.userDataManager.enemyCache.id.set(enemyUuid, attrId);
+                    } catch (e) {
+                        // en caso de que enemyUuid no sea utilizable como key
+                    }
                     const name = monsterNames[attrId];
                     if (name) {
-                        this.logger.info(`Found moster name ${name} for id ${enemyUid} uuid ${enemyUuid}`);
+                        this.logger.info(`Found moster name ${name} for templateId ${attrId} (instance ${enemyUid}) uuid ${enemyUuid}`);
                         this.userDataManager.enemyCache.name.set(enemyUuid, name);
                     }
                     break;
@@ -969,9 +1207,14 @@ class PacketProcessor {
                     const enemyHp = reader.int32();
                     this.userDataManager.enemyCache.hp.set(enemyUuid, enemyHp);
                     const maxH = this.userDataManager.enemyCache.maxHp.get(enemyUuid);
-                    if (maxH) {
+                    if (maxH != null && maxH > 0) { // Asegurarse de que maxH no sea null/undefined y sea mayor que 0
                         const pct = Math.round((enemyHp / maxH) * 100);
                         this.userDataManager.enemyCache.hp_pct.set(enemyUuid, pct);
+                        this.logger.debug(`[BPTimer Debug] Updated HP for ${enemyUid} (UUID: ${enemyUuid}): HP=${enemyHp}, MaxHP=${maxH}, Pct=${pct}%`);
+                    } else {
+                        // Si maxH no está disponible o es 0, limpiar hp_pct para evitar valores incorrectos
+                        this.userDataManager.enemyCache.hp_pct.delete(enemyUuid);
+                        this.logger.debug(`[BPTimer Debug] HP updated for ${enemyUid} (UUID: ${enemyUuid}) but MaxHP is not available or zero. HP=${enemyHp}, MaxHP=${maxH}`);
                     }
                     break;
                 }
@@ -979,9 +1222,14 @@ class PacketProcessor {
                     const enemyMaxHp = reader.int32();
                     this.userDataManager.enemyCache.maxHp.set(enemyUuid, enemyMaxHp);
                     const hp = this.userDataManager.enemyCache.hp.get(enemyUuid);
-                    if (hp != null) {
+                    if (hp != null && enemyMaxHp > 0) { // Asegurarse de que hp no sea null/undefined y enemyMaxHp sea mayor que 0
                         const pct = Math.round((hp / enemyMaxHp) * 100);
                         this.userDataManager.enemyCache.hp_pct.set(enemyUuid, pct);
+                        this.logger.debug(`[BPTimer Debug] Updated MaxHP for ${enemyUid} (UUID: ${enemyUuid}): HP=${hp}, MaxHP=${enemyMaxHp}, Pct=${pct}%`);
+                    } else {
+                        // Si hp no está disponible o enemyMaxHp es 0, limpiar hp_pct
+                        this.userDataManager.enemyCache.hp_pct.delete(enemyUuid);
+                        this.logger.debug(`[BPTimer Debug] MaxHP updated for ${enemyUid} (UUID: ${enemyUuid}) but HP is not available or zero. HP=${hp}, MaxHP=${enemyMaxHp}`);
                     }
                     break;
                 }
@@ -1004,13 +1252,15 @@ class PacketProcessor {
         if (syncNearEntities.Disappear) {
             for (const entity of syncNearEntities.Disappear) {
                 const entityUuid = entity.Uuid;
-                if (entityUuid && isUuidMonster(entityUuid)) {
-                    const entityUid = entityUuid.shiftRight(16).toNumber();
+                if (!entityUuid) continue;
+                const entityUuidInfo = UUIDHelper.parseUUID(entityUuid); // Usar UUIDHelper
+                if (entityUuidInfo.isMonster) {
+                    const entityUid = entityUuidInfo.playerId;
                     if (entity.Type == pb.EDisappearType.EDisappearDead) {
-                        this.userDataManager.enemyCache.hp.set(entityUuid, 0);
+                        this.userDataManager.enemyCache.hp.set(entityUuidInfo.uuid, 0);
                         // También limpiar la posición y el HP% si el monstruo desaparece/muere
-                        this.userDataManager.enemyCache.hp_pct.delete(entityUuid);
-                        this.userDataManager.enemyCache.pos.delete(entityUuid);
+                        this.userDataManager.enemyCache.hp_pct.delete(entityUuidInfo.uuid);
+                        this.userDataManager.enemyCache.pos.delete(entityUuidInfo.uuid);
                     }
                 }
             }
@@ -1019,18 +1269,26 @@ class PacketProcessor {
         for (const entity of syncNearEntities.Appear) {
             const entityUuid = entity.Uuid;
             if (!entityUuid) continue;
-            const entityUid = entityUuid.shiftRight(16).toNumber();
+            const entityUuidInfo = UUIDHelper.parseUUID(entityUuid); // Usar UUIDHelper
+            const entityUid = entityUuidInfo.playerId;
             const attrCollection = entity.Attrs;
 
             if (attrCollection && attrCollection.Attrs) {
                 switch (entity.EntType) {
                     case pb.EEntityType.EntMonster:
-                        this._processEnemyAttrs(entityUuid.toString(), entityUid, attrCollection.Attrs);
+                        this._processEnemyAttrs(entityUuidInfo.uuid, entityUid, attrCollection.Attrs);
                         // Después de procesar los atributos, intentar enviar el reporte a BPTimer
-                        this._sendBPTimerReport(entityUuid.toString(), entityUid);
+                        this._sendBPTimerReport(entityUuidInfo.uuid, entityUid);
                         break;
                     case pb.EEntityType.EntChar:
                         this._processPlayerAttrs(entityUid, attrCollection.Attrs);
+                        // Emitir información adicional si es el jugador local
+                        if (this.localPlayerTracker.isLocalPlayer(entityUid)) {
+                            this.io?.emit('local_player_entity_info', {
+                                uid: entityUid,
+                                isLocalPlayer: true
+                            });
+                        }
                         break;
                     default:
                         // this.logger.debug('Get AttrCollection for Unknown EntType' + entity.EntType);
@@ -1040,26 +1298,98 @@ class PacketProcessor {
         }
     }
 
-    _sendBPTimerReport(monsterUuid, monsterUid) {
+    async _sendBPTimerReport(monsterUuid, monsterUid) {
+        // Verificar si el envío a BPTimer está habilitado
         if (!this.bptimerEnabled) {
-            this.logger.debug('[BPTimer] Envío deshabilitado por switch.');
+            this.logger.info('[BPTimer] Envío deshabilitado por switch.');
             return;
         }
 
-        const monsterId = monsterUid; // Usamos el UID como monster_id
-        const hpPct = this.userDataManager.enemyCache.hp_pct.get(monsterUuid);
-        const position = this.userDataManager.enemyCache.pos.get(monsterUuid);
-        const line = this.userDataManager.getUser(currentUserUuid.shiftRight(16).toNumber()).line; // Obtener la línea del jugador local
+        const localPlayerInfo = this.localPlayerTracker.getInfo();
+        if (!localPlayerInfo) {
+            this.logger.info('[BPTimer] No se pudo enviar el reporte: jugador local no detectado.');
+            return;
+        }
 
-        if (monsterId && hpPct != null && position && line != null) {
+    // Preferir el template id (AttrId) almacenado en enemyCache.id. Si no existe, no enviar
+    const templateId = this.userDataManager.enemyCache.id ? this.userDataManager.enemyCache.id.get(monsterUuid) : null;
+    const monsterId = templateId != null ? templateId : null; // for BPTimer we require template id
+
+        // Obtener hpPct; si no está en la cache, intentar calcularlo con hp y maxHp almacenados
+        let hpPct = this.userDataManager.enemyCache.hp_pct.get(monsterUuid);
+        if (hpPct == null) {
+            const hp = this.userDataManager.enemyCache.hp.get(monsterUuid);
+            const maxH = this.userDataManager.enemyCache.maxHp.get(monsterUuid);
+            if (hp != null && maxH != null && maxH > 0) {
+                hpPct = Math.round((hp / maxH) * 100);
+            }
+        }
+        const position = this.userDataManager.enemyCache.pos.get(monsterUuid);
+        const line = this.userDataManager.getUser(localPlayerInfo.playerId).line; // Obtener la línea del jugador local
+
+        this.logger.info(`[BPTimer Debug] Valores para el reporte: templateId=${templateId}, monsterUid=${monsterUid}, monsterId=${monsterId}, hpPct=${hpPct}, line=${line}, position=${JSON.stringify(position)}`);
+        // Log types for debugging weird coordinate values
+        if (position) {
+            try {
+                this.logger.debug(`[BPTimer Debug] position types: x=${typeof position.x} y=${typeof position.y} z=${typeof position.z}`);
+            } catch (e) {
+                this.logger.debug('[BPTimer Debug] position present but failed to read types: ' + e.message);
+            }
+        }
+
+        // Enviar solo si el templateId está en la lista blanca
+        if (!monsterId) {
+            this.logger.info(`[BPTimer] No se enviará reporte: templateId no disponible para uuid=${monsterUuid}, instanceUid=${monsterUid}`);
+            return;
+        }
+
+        if (!ALLOWED_BPTIMER_MOB_IDS.has(Number(monsterId))) {
+            this.logger.info(`[BPTimer] Ignorando templateId ${monsterId} (no está en la lista blanca de mobs)`);
+            return;
+        }
+
+        // Validate position: ensure coordinates are finite and within sane bounds.
+        // If coordinates look scaled (very large), attempt to normalize by dividing by powers of 10.
+        // If still invalid, drop position but still allow sending the HP report without pos fields.
+        let sanePosition = null;
+        if (position && Number.isFinite(position.x) && Number.isFinite(position.y) && Number.isFinite(position.z)) {
+            const tryNormalize = (pos) => {
+                const divs = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e9, 1e12];
+                for (const d of divs) {
+                    const nx = pos.x / d;
+                    const ny = pos.y / d;
+                    const nz = pos.z / d;
+                    if (Number.isFinite(nx) && Number.isFinite(ny) && Number.isFinite(nz) &&
+                        Math.abs(nx) < 1e6 && Math.abs(ny) < 1e6 && Math.abs(nz) < 1e6) {
+                        return { x: nx, y: ny, z: nz };
+                    }
+                }
+                return null;
+            };
+            sanePosition = tryNormalize(position);
+        }
+        if (!sanePosition) {
+            if (position) this.logger.warn(`[BPTimer] Position dropped as invalid or out of bounds: ${JSON.stringify(position)}`);
+        }
+
+        if (monsterId && hpPct != null && line != null) {
             const payload = {
                 monster_id: monsterId,
                 hp_pct: hpPct,
-                line: line,
-                pos_x: Math.round(position.x * 100) / 100,
-                pos_y: Math.round(position.y * 100) / 100,
-                pos_z: Math.round(position.z * 100) / 100
+                line: line
             };
+            // Only include position for mobs that require it (LOCATION_TRACKED_BPTIMER_MOBS).
+            if (sanePosition && LOCATION_TRACKED_BPTIMER_MOBS.has(Number(monsterId))) {
+                payload.pos_x = Math.round(sanePosition.x * 100) / 100;
+                payload.pos_y = Math.round(sanePosition.y * 100) / 100;
+                payload.pos_z = Math.round(sanePosition.z * 100) / 100;
+            } else {
+                // Either position is invalid or this mob doesn't require position data.
+                if (!sanePosition && position) {
+                    this.logger.warn(`[BPTimer] Position dropped as invalid or out of bounds: ${JSON.stringify(position)}`);
+                }
+                this.logger.info('[BPTimer] Enviando reporte sin posición (pos inválida, ausente o no requerida para este mob)');
+            }
 
             if (!this.bptimerClient) {
                 // Cliente no listo: encolar y salir
@@ -1077,11 +1407,28 @@ class PacketProcessor {
             }
 
             this.logger.info(`[BPTimer] Enviando reporte: ${JSON.stringify(payload)}`);
-            this.bptimerClient.reportHP(payload).catch(e => {
-                this.logger.error(`Error al enviar reporte a BPTimer: ${e.message}`);
-            });
+            try {
+                const result = await this.bptimerClient.reportHP(payload);
+                if (!result || result.success !== true) {
+                    const msg = result && result.message ? result.message : 'Unknown response';
+                    const apiErrorDetails = result && result.error ? ` API Error: ${JSON.stringify(result.error)}` : '';
+                    this.logger.warn(`[BPTimer] Report failed for monster ${monsterId} at line ${line}: ${msg}${apiErrorDetails} (payload: ${JSON.stringify(payload)})`);
+                    // Encolar para reintento en caso de fallo transitorio
+                    this._bptimerQueue.push({ payload, ts: Date.now() });
+                    this._pruneBPTimerQueue();
+                    this._saveBPTimerQueueToDisk();
+                } else {
+                    this.logger.info(`[BPTimer] Report accepted for monster ${monsterId} at line ${line} with ${hpPct}% HP`);
+                }
+            } catch (e) {
+                const errorDetails = e && e.response && e.response.data ? ` Response Data: ${JSON.stringify(e.response.data)}` : '';
+                this.logger.error(`[BPTimer] Error al enviar reporte para monster ${monsterId}: ${e && e.message ? e.message : e}${errorDetails}`);
+                // Encolar para reintento
+                this._bptimerQueue.push({ payload, ts: Date.now() });
+                try { this._pruneBPTimerQueue(); this._saveBPTimerQueueToDisk(); } catch (_) {}
+            }
         } else {
-            this.logger.debug(`[BPTimer] No se pudo enviar el reporte. Datos incompletos: monsterId=${monsterId}, hpPct=${hpPct}, position=${JSON.stringify(position)}, line=${line}`);
+            this.logger.warn(`[BPTimer] No se pudo enviar el reporte. Datos incompletos: monsterId=${monsterId}, hpPct=${hpPct}, position=${JSON.stringify(position)}, line=${line}`);
         }
     }
 
@@ -1179,7 +1526,7 @@ class PacketProcessor {
                 }
             } while (packetsReader.remaining() > 0);
         } catch (e) {
-            const playerIdentifier = currentUserUuid && !currentUserUuid.isZero() ? currentUserUuid.shiftRight(16).toString() : 'Unknown';
+            const playerIdentifier = this.localPlayerTracker.playerId ? this.localPlayerTracker.playerId.toString() : 'Unknown';
             this.logger.error(`Fail while parsing data for player ${playerIdentifier}.\nErr: ${e}`);
         }
     }

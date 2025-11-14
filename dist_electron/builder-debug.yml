@@ -122,7 +122,7 @@ nsis:
 
     !addincludedir "F:\DPS-METER-by-MrSnake\BPSR-Meter-master2.1.8\BPSR-Meter-master\build"
     !include "F:\DPS-METER-by-MrSnake\BPSR-Meter-master2.1.8\BPSR-Meter-master\extra.nsh"
-    !include "C:\Users\MrSna\AppData\Local\Temp\t-gQoPEN\2-messages.nsh"
+    !include "C:\Users\MrSna\AppData\Local\Temp\t-1LNjss\2-messages.nsh"
     !addplugindir /x86-unicode "C:\Users\MrSna\AppData\Local\electron-builder\Cache\nsis\nsis-resources-3.4.1\plugins\x86-unicode"
 
     Var newStartMenuLink

@@ -22,10 +22,6 @@ files:
       - public/ExitLag.png
       - public/icons/**/*
 extraResources:
-  - from: node_modules/cap/
-    to: cap/
-    filter:
-      - '**/*'
   - from: resources/vc_redist.x64.exe
     to: vc_redist.x64.exe
 win:
@@ -35,4 +31,6 @@ win:
 nsis:
   include: extra.nsh
   deleteAppDataOnUninstall: true
+asarUnpack:
+  - '**\node_modules\cap\**'
 electronVersion: 38.6.0
