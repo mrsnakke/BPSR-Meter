@@ -42,6 +42,7 @@ public/build-config.js
 
 # Carpeta 'ignore'
 ignore/
+ANALISIS_COMBO_BACKEND/
 
 # Local private secrets included during packaging (do NOT commit)
 private/
