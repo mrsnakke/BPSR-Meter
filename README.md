@@ -87,6 +87,19 @@ ExitLag Config: ExitLag en exit lag ve a Opciones y busca (metodo de redireccion
 
 Si la aplicación no funciona correctamente, revisa el archivo de log `iniciar_log.txt` que se encuentra en el directorio de datos de la aplicación. Para encontrar este directorio, puedes buscar `%APPDATA%/bpsr-meter` en Windows. Puedes enviarme los errores a Discord o ponerte en contacto conmigo e intentaré resolverlo.
 
+### Problema de Transparencia (Ventana no transparente)
+
+Si la ventana del medidor no es transparente o tiene un fondo negro, puedes solucionarlo de la siguiente manera:
+
+1.  **Cierra completamente el medidor de DPS** (asegúrate de salir también desde la bandeja del sistema).
+2.  **Crea un acceso directo** a `BPSR-Meter.exe`.
+3.  **Haz clic derecho en el acceso directo** y selecciona `Propiedades`.
+4.  En el campo `Destino`: **Añade lo siguiente después de la ruta existente** (mantén las comillas solo alrededor de la ruta del .exe, no alrededor de los flags):
+    ` --disable-gpu --disable-direct-composition --disable-features=UseSkiaRenderer`
+    Ejemplo de línea de destino final:
+    `"C:\Games\BPSR-Meter\BPSR-Meter.exe" --disable-gpu --disable-direct-composition --disable-features=UseSkiaRenderer`
+5.  Haz clic en `Aplicar` y luego **ejecuta la aplicación solo desde este acceso directo**.
+
 ## Preguntas Frecuentes (FAQ)
 
 **¿Es baneable usar este medidor?**
@@ -203,6 +216,19 @@ In this mode, the automatic clearing when changing instances is disabled as it i
 ## Troubleshooting
 
 If the application isn't working correctly, check the `iniciar_log.txt` log file located in the application's data directory. To find this directory, you can search for `%APPDATA%/bpsr-meter` in Windows. You can send me the errors on Discord or get in touch, and I'll try to resolve it.
+
+### Transparency Issue (Non-transparent Window)
+
+If the meter window is not transparent or has a black background, you can fix it as follows:
+
+1.  **Completely close the DPS meter** (make sure to exit from the system tray as well).
+2.  **Create a shortcut** to `BPSR-Meter.exe`.
+3.  **Right-click the shortcut** and select `Properties`.
+4.  In the `Target` field: **Add the following after the existing path** (keep quotes only around the .exe path, not around the flags):
+    ` --disable-gpu --disable-direct-composition --disable-features=UseSkiaRenderer`
+    Example final target line:
+    `"C:\Games\BPSR-Meter\BPSR-Meter.exe" --disable-gpu --disable-direct-composition --disable-features=UseSkiaRenderer`
+5.  Click `Apply` and then **run the application only from this shortcut**.
 
 ## Frequently Asked Questions (FAQ)
 

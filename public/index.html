@@ -29,23 +29,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     <style>
         /* Botón Advanced/Lite: rectangular y alargado */
         .advanced-lite-btn {
-            border-radius: 18px !important;
-            width: 110px !important;
-            min-width: 90px;
-            height: 32px !important;
+            border-radius: 14.4px !important;
+            width: 88px !important;
+            min-width: 72px;
+            height: 25.6px !important;
             background: rgba(255,255,255,0.10);
             color: #fff;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.76rem;
             border: 1px solid rgba(255,255,255,0.13);
             box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-            margin: 0 2px;
+            margin: 0 1.6px;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0 18px;
+            padding: 0 14.4px;
         }
         .advanced-lite-btn.lite {
             background: rgba(40,40,40,0.45) !important;
@@ -498,7 +498,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             position: absolute;
             top: 0;
             z-index: 10;
-            gap: 10px;
+            gap: 8px;
         }
         #diccionario-form {
             display: flex;
@@ -530,15 +530,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         #guardar-btn:hover {
             background: #6a6e9a;
         }
-        .control-button { width: 32px; height: 32px; background-color: rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; color: var(--text-primary); font-size: 0.9rem; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 4px; -webkit-app-region: no-drag; }
+        .control-button { width: 25.6px; height: 25.6px; background-color: rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; color: var(--text-primary); font-size: 0.72rem; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 4px; -webkit-app-region: no-drag; }
         #reset-button { background-color: rgba(219, 104, 121, 0.5); }
         #reset-button:hover { background-color: rgba(219, 104, 121, 0.7); }
 
         .drag-indicator {
             /* Posición relativa para que esté al lado del botón de cerrar */
             position: relative;
-            width: 32px;
-            height: 32px;
+            width: 25.6px;
+            height: 25.6px;
             background-color: rgba(0, 123, 255, 0.5); /* Azul */
             border: 1px solid rgba(0, 123, 255, 0.7);
             border-radius: 50%; /* Hacerlo circular como los otros botones */
@@ -546,7 +546,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             justify-content: center;
             align-items: center;
             color: #ffffff;
-            font-size: 0.9rem; /* Tamaño de fuente como los otros botones */
+            font-size: 0.72rem; /* Tamaño de fuente como los otros botones */
             cursor: grab;
             -webkit-app-region: drag; /* Permite arrastrar la ventana desde este elemento */
         }
@@ -570,8 +570,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         }
 
         .sync-button {
-            width: 29px;
-            height: 29px;
+            width: 23.2px;
+            height: 23.2px;
             background-color: rgba(0,0,0,0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 50%;
@@ -601,7 +601,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         }
 
         .sync-icon {
-            font-size: 0.9rem; /* Tamaño del icono */
+            font-size: 0.72rem; /* Tamaño del icono */
             display: block; /* Mostrar por defecto */
             color: #00aaff; /* Color azul para el icono */
         }
@@ -611,7 +611,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         }
 
         .sync-timer {
-            font-size: 0.9rem;
+            font-size: 0.72rem;
             font-weight: 700;
             color: var(--text-primary);
             display: none; /* Ocultar por defecto */
@@ -621,7 +621,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
         .dps-timer-buttons {
             display: flex;
-            gap: 8px;
+            gap: 6.4px;
             justify-content: center;
         }
         .timer-btn {
@@ -697,7 +697,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         /* Estilos para el botón ExitLag */
         #exitlag-button {
             background-image: url('ExitLag.png');
-            background-size: contain; /* Cambiado a 'contain' para asegurar que la imagen completa sea visible */
+            background-size: 80%; /* Cambiado a 'contain' para asegurar que la imagen completa sea visible */
             background-position: center;
             background-repeat: no-repeat;
             background-color: transparent; /* Asegurarse de que no haya un color de fondo sólido cubriendo la imagen */
@@ -721,8 +721,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         .switch {
             position: relative;
             display: inline-block;
-            width: 40px; /* Ancho del switch */
-            height: 24px; /* Alto del switch */
+            width: 32px; /* Ancho del switch */
+            height: 19.2px; /* Alto del switch */
         }
 
         .switch input {
@@ -741,16 +741,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             background-color: #ccc;
             -webkit-transition: .4s;
             transition: .4s;
-            border-radius: 24px; /* Bordes redondeados */
+            border-radius: 19.2px; /* Bordes redondeados */
         }
 
         .slider:before {
             position: absolute;
             content: "";
-            height: 16px;
-            width: 16px;
-            left: 4px;
-            bottom: 4px;
+            height: 12.8px;
+            width: 12.8px;
+            left: 3.2px;
+            bottom: 3.2px;
             background-color: white;
             -webkit-transition: .4s;
             transition: .4s;
@@ -766,15 +766,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         }
 
         input:checked + .slider:before {
-            -webkit-transform: translateX(16px);
-            -ms-transform: translateX(16px);
-            transform: translateX(16px);
+            -webkit-transform: translateX(12.8px);
+            -ms-transform: translateX(12.8px);
+            transform: translateX(12.8px);
         }
 
         /* Estilos para la imagen BPTimer */
         .bptimer-icon {
-            width: 24px; /* Tamaño del emoji */
-            height: 24px;
+            width: 19.2px; /* Tamaño del emoji */
+            height: 19.2px;
             cursor: help; /* Cambiar cursor para indicar tooltip */
             vertical-align: middle;
         }
@@ -799,9 +799,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 <body>
 <div class="dps-meter">
         <header class="controls" style="width: 100%;">
-            <div style="position: relative; width: 32px; height: 32px; margin-right: 10px;"> <!-- Contenedor para el icono y el botón de sincronización -->
-                <img src="icon.png" alt="Logo" style="height: 32px; position: absolute; top: 0; left: 0;">
-                <div class="sync-button" id="sync-button" style="position: absolute; top: 1.5px; left: 1.5px; z-index: 11;"> <!-- Centrado sobre el icono -->
+            <div style="position: relative; width: 25.6px; height: 25.6px; margin-right: 8px;"> <!-- Contenedor para el icono y el botón de sincronización -->
+                <img src="icon.png" alt="Logo" style="height: 25.6px; position: absolute; top: 0; left: 0;">
+                <div class="sync-button" id="sync-button" style="position: absolute; top: 1.2px; left: 1.2px; z-index: 11;"> <!-- Centrado sobre el icono -->
                     <i class="fa-solid fa-arrows-rotate sync-icon"></i>
                     <span class="sync-timer"></span>
                 </div>
@@ -816,14 +816,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         <!-- Botón DPS/Healer solo visible en modo Lite -->
         <button class="control-button advanced-lite-btn" id="lite-dps-healer-btn" style="display:none;">DPS</button>
             <!-- Botón de bloqueo/desbloqueo -->
-            <button class="control-button" id="lock-button" title="Bloquear posición" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-lock-open"></i></button>
+            <button class="control-button" id="lock-button" title="Bloquear posición" style="width: 25.6px; height: 25.6px; font-size: 0.72rem; margin-top: 0;"><i class="fa-solid fa-lock-open"></i></button>
             <!-- Botón de mover ventana (drag) -->
             <div class="drag-indicator" id="drag-indicator" title="Mover ventana">
                 <i class="fa-solid fa-up-down-left-right"></i>
             </div>
             <!-- Nuevo botón ExitLag -->
-            <button class="control-button" id="exitlag-button" title="Toggle ExitLag" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;">
-                <img src="ExitLag.png" alt="ExitLag Icon" style="width: 100%; height: 100%; object-fit: contain; pointer-events: none;">
+            <button class="control-button" id="exitlag-button" title="Toggle ExitLag" style="width: 25.6px; height: 25.6px; font-size: 0.72rem; margin-top: 0;">
+                <img src="ExitLag.png" alt="ExitLag Icon" style="width: 80%; height: 80%; object-fit: contain; pointer-events: none;">
             </button>
             <!-- Botón BPTimer Switch y su imagen -->
             <div class="bptimer-control-group">
@@ -833,8 +833,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                 </label>
                 <img src="BPTimer.svg" alt="BPTimer Icon" class="bptimer-icon" title="World Boss HP Data For bptimer.con">
             </div>
-            <button class="control-button" id="minimize-button" title="Minimizar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-window-minimize"></i></button>
-            <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
+            <button class="control-button" id="minimize-button" title="Minimizar ventana" style="width: 25.6px; height: 25.6px; font-size: 0.72rem; margin-top: 0;"><i class="fa-solid fa-window-minimize"></i></button>
+            <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 25.6px; height: 25.6px; font-size: 0.72rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
         </header>
         <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
             <div id="dps-timer" style="text-align:center;font-size:1.2rem;font-weight:700;margin-top:4px;min-height:28px;color:#e0e0e0;display:none; text-shadow: var(--text-shadow);"></div>
