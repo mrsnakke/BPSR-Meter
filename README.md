@@ -2,14 +2,14 @@
 <img width="1434" height="435" alt="image" src="https://github.com/user-attachments/assets/3e485411-6b1e-4bfc-be20-7fbdd941ce1c" />
 
 </div>
-
-# Agradecimientos y Créditos
-
-Este proyecto, **BPSR Meter**, es una versión modificada y personalizada del excelente trabajo original de **dmlgzs**: [StarResonanceDamageCounter](https://github.com/dmlgzs/StarResonanceDamageCounter). Agradecemos enormemente su contribución a la comunidad. Puedes encontrar más detalles sobre los autores y contribuidores en [AUTHORS.md](AUTHORS.md).
-
 ---
 
 # BPSR Meter - Medidor de DPS para Blue Protocol
+
+> ### 🚀 Recomendación: BPSR Fully Automatic Module Filtering Tool
+> Para facilitar el cálculo de configuraciones de módulos, te recomiendo mi otro proyecto:
+> [**BPSR-AutoModules**](https://github.com/mrsnakke/BPSR-AutoModules)
+> (No requiere capturas de pantalla ni entrada manual)
 
 [![English](https://img.shields.io/badge/English-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NDAgNjMwIj48cGF0aCBmaWxsPSIjYjIyMjM0IiBkPSJNMCAwaDk4MHY2ODNIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCA3Nmg5ODB2NTJIMHptMCAxNTJoOTgwdi01Mkgwem0wIDE1Mmg5ODB2LTUySDB6bTAgMTUyaDk4MHYtNTJIMHptMCAxNTJoOTgwdi01MkgweiIvPjxwYXRoIGZpbGw9IiMwMDMyOTYiIGQ9Ik0wIDBoNDIwVjM2OEgwem0zMCAyNGwzMyAxMDIgMTAtMzEtMzItODcgNzIgMzcgOTctMzcgMTIgMzItNzIgODYgMTIgMzEgOTYtMzcgNzIgMzYtMzItODcgMTAtMzIgMzMgMTAyLTEwMy02Mi0xMDMgNjIgMzMgMTAyIDEwLTMxLTMyLTg3IDcyIDM3IDk7LTM3IDEyIDMyLTcyIDg2IDEyIDMxIDk2LTM3IDcyIDM2LTMyLTg3IDEwLTMyIDMzIDEwMi0xMDMtNjItMTAzIDYyem0wIDEyMGwzMyAxMDIgMTAtMzEtMzItODcgNzIgMzcgOTctMzcgMTIgMzItNzIgODYgMTIgMzEgOTYtMzcgNzIgMzYtMzItODcgMTAtMzIgMzMgMTAyLTEwMy02Mi0xMTAgNjIgMzMgMTAyIDEwLTMxLTMyLTg3IDcyIDM3IDk3LTM3IDEyIDMyLTcyIDg2IDEyIDMxIDk2LTM3IDcyIDM2LTMyLTg3IDEwLTMyIDMzIDEwMi0xMDMtNjItMTAzIDYyem0xNjggMTIwbDMzIDEwMiAxMC0zMS0zMi04NyA3MiAzNyA5Ny0zNyAxMiAzMi03MiA4NiAxMiAzMSA5Ni0zNyA3MiAzNi0zMi04NyAxMC0zMiAzMyAxMDItMTAzLTYyLTEwMyA2MnoiLz48L3N2Zz4=)](#bpsr-meter-english-version)
 
@@ -144,9 +144,21 @@ Si la ventana del medidor no es transparente o tiene un fondo negro, puedes solu
 [![X (Twitter)](https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/MrSnakeVT)
 
 ---
+
+# Créditos
+
+Este proyecto, **BPSR Meter**, es una versión modificada y personalizada del excelente trabajo original de **dmlgzs**: [StarResonanceDamageCounter](https://github.com/dmlgzs/StarResonanceDamageCounter).
+
+Agradecimientos especiales a [woheedev](https://github.com/woheedev/) por su librería [bptimer-api-client], que facilita la conexión con [bptimer.com](https://bptimer.com).
+
 ---
 
 # BPSR Meter (English Version)
+
+> ### 🚀 Recommendation: BPSR Fully Automatic Module Filtering Tool
+> To facilitate module configuration calculations, I recommend my other project:
+> [**BPSR-AutoModules**](https://github.com/mrsnakke/BPSR-AutoModules)
+> (No screenshots or manual input required)
 
 BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Second) meter for the game. It overlays the game window to provide detailed combat statistics without interrupting your gameplay.
 
@@ -270,3 +282,11 @@ If the meter window is not transparent or has a black background, you can fix it
 [![Kick](https://img.shields.io/badge/Kick-50FF78?style=for-the-badge&logo=kick&logoColor=white)](https://kick.com/mrsnakevt)
 [![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@MrSnake_VT)
 [![X (Twitter)](https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/MrSnakeVT)
+
+---
+
+# Credits
+
+This project, **BPSR Meter**, is a modified and customized version of the excellent original work by **dmlgzs**: [StarResonanceDamageCounter](https://github.com/dmlgzs/StarResonanceDamageCounter).
+
+Special thanks to [woheedev](https://github.com/woheedev/) for their [bptimer-api-client] library, which facilitates connection with [bptimer.com](https://bptimer.com).
