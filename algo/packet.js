@@ -1118,22 +1118,19 @@ class PacketProcessor {
                     const playerName = reader.string();
                     this.logger.debug(`_processPlayerAttrs: Setting player name for UID ${playerUid}: ${playerName}`);
                     this.userDataManager.setName(playerUid, playerName);
-                        this.userDataManager.enemyCache.id.set(enemyUuid, attrId);
+                    break; // Añadido 'break'
+
                 case AttrType.AttrProfessionId:
                     const professionId = reader.int32();
                     const professionName = getProfessionNameFromId(professionId);
-                    // Determinar nombre: override -> monster_names.json -> undefined
-                    const overrideName = MOB_NAME_OVERRIDES[attrId];
-                    const nameFromTable = monsterNames[attrId];
-                    const name = overrideName || nameFromTable;
-                    if (name) {
-                        this.logger.info(`Found moster name ${name} for templateId ${attrId} (instance ${enemyUid}) uuid ${enemyUuid}`);
-                        this.userDataManager.enemyCache.name.set(enemyUuid, name);
-                    } else {
-                        this.logger.debug(`Template id ${attrId} for instance ${enemyUid} has no known name in tables or overrides.`);
-                    }
+                    this.userDataManager.getUser(playerUid).setMainProfession(professionName);
+                    break; // Añadido 'break'
+
+                case AttrType.AttrFightPoint: // AttrFightPoint debe ser un case separado
+                    const playerFightPoint = reader.int32(); // Obtener fightPoint del reader
                     this.userDataManager.setFightPoint(playerUid, playerFightPoint);
-                    break;
+                    break; // Añadido 'break'
+
                 case AttrType.AttrLevel:
                     const playerLevel = reader.int32();
                     this.userDataManager.setAttrKV(playerUid, 'level', playerLevel);

@@ -1096,7 +1096,7 @@ async function main() {
             }),
         ),
         transports: [
-            new winston.transports.Console({ level: 'error' }), // La consola solo mostrará errores
+            new winston.transports.Console({ level: 'debug' }), // La consola mostrará debug y superiores
             new SocketIoTransport({ io: io, level: 'debug' }) // Socket.IO emitirá logs de debug y superiores
         ],
     });
@@ -1159,9 +1159,9 @@ async function main() {
         await new Promise(resolve => setTimeout(resolve, 10000)); // Esperar 10 segundos para que el usuario lea el mensaje
         process.exit(1);
     }
-    // Forzar el nivel de log a 'error' para que solo los errores se muestren en la consola
-    logger.level = 'error'; // Esto sobrescribirá el nivel 'info' del logger, pero el SocketIoTransport seguirá emitiendo 'info'
-
+    // El nivel de log de la consola ya está configurado a 'debug'
+    // Eliminar la línea que lo sobrescribe
+    
     const userDataManager = new UserDataManager(logger);
 
     // Inicialización asíncrona del gestor de datos de usuario
