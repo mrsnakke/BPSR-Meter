@@ -319,10 +319,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             justify-content: center;
             align-items: center;
             text-align: center;
-            width: 82px;
+            width: 30px;
             flex-shrink: 0;
             position: relative;
-            margin-left: 0px;
+            margin-left: -5px;
+            margin-right: 20px;
         }
 
         .extra-col {
@@ -330,9 +331,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             display: flex;
             flex-direction: column;
             justify-content: center;
-            width: 120px;
+            width: 90px;
             flex-shrink: 0;
             margin-left: 0px;
+            margin-right: 20px;
         }
 
         .player-name {
@@ -445,7 +447,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             flex-shrink: 0;
             margin-left: 0px;
             border-left: 1px solid rgba(255, 255, 255, 0.1);
-            padding-left: 4px;
+            padding-left: 20px;
         }
 
         .additional-stats-group {
@@ -520,7 +522,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             transform: scale(1.2);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        .dps-meter { width: 590px; background-color: transparent; padding: 4px 8px; } /* Ancho fijo */
+        .dps-meter { width: 530px; background-color: transparent; padding: 4px 8px; } /* Ancho fijo */
         .controls {
             display: flex;
             justify-content: flex-start;
@@ -1621,8 +1623,10 @@ const professionMap = {
                                 </div>
                             </div>
                             <div class="column icon-col">
-                                <img class="class-icon" src="icons/${prof.icon}" alt="icon">
-                                <span style="font-size: 0.8rem; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 0 4px; border-radius: 5px; position: absolute; top: 12.5px; left: 50%; transform: translateX(-50%); text-shadow: 0 0 2px rgba(0,0,0,0.7);">${Math.round(u.damagePercent)}%</span>
+                                <div style="position: relative; width: 42px; height: 42px; display: flex; justify-content: center; align-items: center;">
+                                    <img class="class-icon" src="icons/${prof.icon}" alt="icon">
+                                    <span style="font-size: 0.8rem; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 0 4px; border-radius: 5px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-shadow: 0 0 2px rgba(0,0,0,0.7);">${Math.round(u.damagePercent)}%</span>
+                                </div>
                             </div>
                             <div class="column extra-col">
                                 <div class="stats-extra">
