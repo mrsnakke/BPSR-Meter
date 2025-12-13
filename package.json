@@ -1,6 +1,6 @@
 {
   "name": "bpsr-meter",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "description": "BPSR Meter",
   "main": "electron-main.js",
   "bin": {
@@ -24,7 +24,7 @@
   "license": "AGPL-3.0",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
-    "@woheedev/bptimer-api-client": "^0.1.4",
+    "@woheedev/bptimer-api-client": "^0.2.0",
     "cap": "^0.2.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
