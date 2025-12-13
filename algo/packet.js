@@ -1015,7 +1015,7 @@ class PacketProcessor {
             if (charBase.AccountId) {
                 this.userDataManager.setAttrKV(playerUid, 'account_id', charBase.AccountId);
             }
-            
+
             if (charBase.FightPoint) this.userDataManager.setFightPoint(playerUid, charBase.FightPoint);
 
             if (!vData.ProfessionList) return;
@@ -1394,8 +1394,8 @@ class PacketProcessor {
                 }
                 this.logger.info('[BPTimer] Enviando reporte sin posición (pos inválida, ausente o no requerida para este mob)');
             }
-            
-                        if (account_id) {
+
+            if (account_id) {
                 payload.account_id = account_id;
             }
 
