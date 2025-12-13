@@ -875,9 +875,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         </header>
         <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
             <div id="dps-timer" style="text-align:center;font-size:1.2rem;font-weight:700;margin-top:4px;min-height:28px;color:#e0e0e0;display:none; text-shadow: var(--text-shadow);"></div>
+            <div id="combined-stats-container" style="display: flex; justify-content: space-around; margin-top: 30px; margin-bottom: -30px; padding: 0 8px; gap: 3px;">
+                <div id="total-dps-combined" style="text-align: center; font-size: 1.1rem; font-weight: 600; color: #e0e0e0; text-shadow: var(--text-shadow); background: rgba(0,0,0,0.3); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); flex: 1; display: none; align-items: center; justify-content: center; gap: 8px;">
+                     <i class="fa-solid fa-crosshairs" style="color: #db6879;"></i> Total DPS: <span>0</span>
+                </div>
+                <div id="total-damage-combined" style="text-align: center; font-size: 1.1rem; font-weight: 600; color: #e0e0e0; text-shadow: var(--text-shadow); background: rgba(0,0,0,0.3); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); flex: 1; display: none; align-items: center; justify-content: center; gap: 8px;">
+                     <i class="fa-solid fa-burst" style="color: #f0ad4e;"></i> Total DMG: <span>0</span>
+                </div>
+                <div id="version-combined" style="text-align: center; font-size: 0.8rem; font-weight: 600; color: rgba(255, 255, 255, 0.7); flex: 0 0 auto; padding: 6px 0; display: flex; align-items: center; justify-content: center; min-width: 60px;">
+                </div>
+            </div>
             <div id="logs-section" style="margin-top:8px;"></div>
         </div>
-        <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1);"><div id="message-display">Esperando datos...</div></main>
+        <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1);"><div id="message-display">...</div></main>
     </div>
 
 <script>
@@ -1298,6 +1308,18 @@ const professionMap = {
         lastTotalDamage = 0;
         lastDamageChangeTime = Date.now();
         stopSyncTimer(); // Detener el temporizador de sincronización al reiniciar
+
+        // Resetear los valores de DPS y Daño Total Combinado
+        const totalDpsCombinedDiv = document.getElementById('total-dps-combined');
+        const totalDamageCombinedDiv = document.getElementById('total-damage-combined');
+        if (totalDpsCombinedDiv) {
+            totalDpsCombinedDiv.querySelector('span').textContent = '0';
+            totalDpsCombinedDiv.style.display = 'none';
+        }
+        if (totalDamageCombinedDiv) {
+            totalDamageCombinedDiv.querySelector('span').textContent = '0';
+            totalDamageCombinedDiv.style.display = 'none';
+        }
     }
 
     // La función syncData ya no se llama por un clic, pero se mantiene por si se usa internamente
@@ -1488,6 +1510,10 @@ const professionMap = {
             }
 
             const sumaTotalDamage = userArray.reduce((acc, u) => acc + (u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0), 0);
+            const sumaTotalDps = userArray.reduce((acc, u) => acc + (u.total_dps ? Number(u.total_dps) : 0), 0);
+
+            const totalDpsCombinedDiv = document.getElementById('total-dps-combined');
+            const totalDamageCombinedDiv = document.getElementById('total-damage-combined');
 
             if (sumaTotalDamage > 0) {
                 if (sumaTotalDamage !== lastTotalDamage) {
@@ -1503,10 +1529,22 @@ const professionMap = {
                         startSyncTimer();
                     }
                 }
+                // Mostrar y actualizar los valores combinados
+                if (totalDpsCombinedDiv) {
+                    totalDpsCombinedDiv.style.display = 'flex';
+                    totalDpsCombinedDiv.querySelector('span').textContent = formatStat(sumaTotalDps);
+                }
+                if (totalDamageCombinedDiv) {
+                    totalDamageCombinedDiv.style.display = 'flex';
+                    totalDamageCombinedDiv.querySelector('span').textContent = formatStat(sumaTotalDamage);
+                }
             } else {
                 lastTotalDamage = 0;
                 lastDamageChangeTime = Date.now();
                 stopSyncTimer();
+                // Ocultar los valores combinados si no hay daño
+                if (totalDpsCombinedDiv) totalDpsCombinedDiv.style.display = 'none';
+                if (totalDamageCombinedDiv) totalDamageCombinedDiv.style.display = 'none';
             }
 
             // Cálculo de damagePercent para todos los usuarios (base para Advanced y Lite DPS)
@@ -1737,6 +1775,19 @@ const professionMap = {
         window.electronAPI.onLockStateChanged((isLocked) => {
             currentLockState = isLocked;
         });
+    }
+
+    // Mostrar la versión en la nueva columna combinada
+    const versionCombined = document.getElementById('version-combined');
+    if (versionCombined) {
+        fetch('/api/version')
+            .then(response => response.json())
+            .then(data => {
+                if (data.version) {
+                    versionCombined.textContent = `ver${data.version}`;
+                }
+            })
+            .catch(error => console.error('Error al obtener la versión:', error));
     }
 
     document.addEventListener('click', () => {

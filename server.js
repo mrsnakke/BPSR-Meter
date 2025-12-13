@@ -46,6 +46,7 @@ const print = console.log;
 const app = express();
 const { exec } = require('child_process');
 const findDefaultNetworkDevice = require('./algo/netInterfaceUtil');
+const packageJson = require('./package.json'); // Importar package.json
 
 // Transporte personalizado para Winston que emite logs a través de Socket.IO
 class SocketIoTransport extends Transport {
@@ -1717,6 +1718,11 @@ async function main() {
         }
         io.emit('dps_logs', logs); // Emitir también a través de socket.io
         res.json(logs);
+    });
+
+    // Nuevo endpoint para obtener la versión
+    app.get('/api/version', (req, res) => {
+        res.json({ version: packageJson.version });
     });
 
     try {
