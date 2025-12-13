@@ -8,7 +8,7 @@ dist/logs/
 
 # Build output
 /dist
-
+/dps-meter-visualizer
 # Misc
 .npmrc
 /Prerequisites/npcap-1.83.exe

@@ -1012,6 +1012,10 @@ class PacketProcessor {
                 this.userDataManager.setName(playerUid, charBase.Name);
             }
 
+            if (charBase.AccountId) {
+                this.userDataManager.setAttrKV(playerUid, 'account_id', charBase.AccountId);
+            }
+            
             if (charBase.FightPoint) this.userDataManager.setFightPoint(playerUid, charBase.FightPoint);
 
             if (!vData.ProfessionList) return;
@@ -1308,6 +1312,9 @@ class PacketProcessor {
             return;
         }
 
+    // Get account_id for the local player (used for region detection)
+    const account_id = this.userDataManager.getUser(localPlayerInfo.playerId)?.attr?.account_id;
+
     // Preferir el template id (AttrId) almacenado en enemyCache.id. Si no existe, no enviar
     const templateId = this.userDataManager.enemyCache.id ? this.userDataManager.enemyCache.id.get(monsterUuid) : null;
     const monsterId = templateId != null ? templateId : null; // for BPTimer we require template id
@@ -1386,6 +1393,14 @@ class PacketProcessor {
                     this.logger.warn(`[BPTimer] Position dropped as invalid or out of bounds: ${JSON.stringify(position)}`);
                 }
                 this.logger.info('[BPTimer] Enviando reporte sin posición (pos inválida, ausente o no requerida para este mob)');
+            }
+            
+                        if (account_id) {
+                payload.account_id = account_id;
+            }
+
+            if (localPlayerInfo.playerId) {
+                payload.uid = localPlayerInfo.playerId;
             }
 
             if (!this.bptimerClient) {
