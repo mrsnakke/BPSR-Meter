@@ -4,6 +4,7 @@ const path = require('path');
 const { exec, fork } = require('child_process');
 const net = require('net'); // Necesario para checkPort
 const fs = require('fs');
+const https = require('https'); // Importar módulo https para solicitudes web
 
 // Función para loguear en archivo seguro para entorno empaquetado
 function logToFile(msg) {
@@ -19,6 +20,21 @@ function logToFile(msg) {
     }
 }
 
+// Función para comparar versiones semánticas (v1 > v2 -> 1, v1 < v2 -> -1, v1 == v2 -> 0)
+function compareVersions(v1, v2) {
+    const parts1 = v1.split('.').map(Number);
+    const parts2 = v2.split('.').map(Number);
+    const maxLength = Math.max(parts1.length, parts2.length);
+
+    for (let i = 0; i < maxLength; i++) {
+        const p1 = parts1[i] || 0;
+        const p2 = parts2[i] || 0;
+
+        if (p1 > p2) return 1;
+        if (p1 < p2) return -1;
+    }
+    return 0;
+}
 
 let mainWindow;
 let serverProcess;
@@ -328,6 +344,7 @@ function promoteOverlayWindow(win, { focus = false } = {}) {
 
 app.whenReady().then(() => {
     createWindow();
+    checkForUpdates(); // Llamar a la función de comprobación de actualizaciones al inicio
 
     // Registrar atajo de teclado global para F10 (limpiar datos de DPS)
     globalShortcut.register('F10', () => {
@@ -343,6 +360,59 @@ app.whenReady().then(() => {
         }
     });
 });
+
+// Manejar el evento para abrir un enlace externo
+ipcMain.on('open-external-link', (event, url) => {
+    require('electron').shell.openExternal(url);
+});
+
+// Función para comprobar actualizaciones
+async function checkForUpdates() {
+    const currentVersion = app.getVersion();
+    logToFile(`Current application version: ${currentVersion}`);
+
+    const repoOwner = 'mrsnakke'; // Reemplaza con el propietario de tu repositorio
+    const repoName = 'BPSR-Meter'; // Reemplaza con el nombre de tu repositorio
+    const githubApiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`;
+
+    https.get(githubApiUrl, {
+        headers: {
+            'User-Agent': 'BPSR-Meter-Updater',
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+        }
+    }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+            data += chunk;
+        });
+        res.on('end', () => {
+            if (res.statusCode === 200) {
+                try {
+                    const release = JSON.parse(data);
+                    const latestVersion = release.tag_name.replace(/^v/, ''); // Eliminar 'v' si existe
+                    const releaseUrl = release.html_url;
+                    logToFile(`Latest GitHub release version: ${latestVersion}`);
+
+                    if (compareVersions(latestVersion, currentVersion) > 0) {
+                        logToFile(`New version available: ${latestVersion}. Current: ${currentVersion}`);
+                        if (mainWindow) {
+                            mainWindow.webContents.send('update-available', { latestVersion, releaseUrl });
+                        }
+                    } else {
+                        logToFile('No new update available.');
+                    }
+                } catch (e) {
+                    logToFile('Error parsing GitHub API response: ' + e.message);
+                }
+            } else {
+                logToFile(`Failed to fetch GitHub releases. Status: ${res.statusCode}`);
+            }
+        });
+    }).on('error', (e) => {
+        logToFile('Error fetching GitHub releases: ' + e.message);
+    });
+}
 
 app.on('will-quit', () => {
     // Anular el registro de todos los atajos de teclado cuando la aplicación se cierra

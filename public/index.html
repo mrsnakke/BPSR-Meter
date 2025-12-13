@@ -890,6 +890,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1);"><div id="message-display">...</div></main>
     </div>
 
+    <!-- Notificación de actualización -->
+    <div id="update-notification" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.8); color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); z-index: 1000; text-align: center; font-family: var(--font-main);">
+        <p id="update-message" style="margin: 0 0 10px 0; font-size: 1.1rem;"></p>
+        <div style="display: flex; justify-content: center; gap: 15px;">
+            <button id="update-skip-button" style="background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 1rem;">Skip</button>
+            <button id="update-button" style="background-color: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 1rem;">Update</button>
+        </div>
+    </div>
+
 <script>
 
 // Crear un socket global temprano para capturar logs del servidor incluso antes de DOMContentLoaded
@@ -1807,6 +1816,28 @@ const professionMap = {
             window.electronAPI.mouseLeave();
         }
     });
+
+    // Manejar el evento de actualización disponible desde el proceso principal
+    if (window.electronAPI) {
+        window.electronAPI.onUpdateAvailable((data) => {
+            const updateNotification = document.getElementById('update-notification');
+            const updateMessage = document.getElementById('update-message');
+            const updateButton = document.getElementById('update-button');
+            const updateSkipButton = document.getElementById('update-skip-button');
+
+            if (updateNotification && updateMessage && updateButton && updateSkipButton) {
+                updateMessage.textContent = `Update available: ${data.latestVersion}`;
+                updateButton.onclick = () => {
+                    window.electronAPI.openExternalLink(data.releaseUrl);
+                    updateNotification.style.display = 'none';
+                };
+                updateSkipButton.onclick = () => {
+                    updateNotification.style.display = 'none';
+                };
+                updateNotification.style.display = 'block';
+            }
+        });
+    }
 
     // Skill button: load module if necessary and open Skill Analysis view
     (function attachSkillButton(){
