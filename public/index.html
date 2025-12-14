@@ -1505,7 +1505,7 @@ const professionMap = {
             const currentGlobalSettings = await settingsRes.json();
 
             if (!userData.user || Object.keys(userData.user).length === 0) {
-                container.innerHTML = '<div id="message-display">Esperando datos...</div>';
+                container.innerHTML = '<div id="message-display">...</div>';
                 updateSyncButtonState();
                 return;
             }
@@ -1513,7 +1513,7 @@ const professionMap = {
             let userArray = Object.values(userData.user);
             userArray = userArray.filter(u => u.total_damage && u.total_damage.total > 0);
             if (userArray.length === 0) {
-                container.innerHTML = '<div id="message-display">Esperando datos...</div>';
+                container.innerHTML = '<div id="message-display">...</div>';
                 updateSyncButtonState();
                 return;
             }
@@ -1820,6 +1820,7 @@ const professionMap = {
     // Manejar el evento de actualización disponible desde el proceso principal
     if (window.electronAPI) {
         window.electronAPI.onUpdateAvailable((data) => {
+            console.log(`[index.html] Received 'update-available' event with latestVersion: ${data.latestVersion}, releaseUrl: ${data.releaseUrl}`);
             const updateNotification = document.getElementById('update-notification');
             const updateMessage = document.getElementById('update-message');
             const updateButton = document.getElementById('update-button');

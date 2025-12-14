@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     mouseLeave: () => ipcRenderer.send('mouse-leave'),
     onClearDpsData: (callback) => ipcRenderer.on('clear-dps-data', () => callback()),
     onSetLocalPlayerUid: (callback) => ipcRenderer.on('set-local-player-uid', (event, uid) => callback(uid)),
+    onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (event, data) => callback(data)),
+    openExternalLink: (url) => ipcRenderer.send('open-external-link', url),
 });
 
 window.addEventListener('DOMContentLoaded', () => {

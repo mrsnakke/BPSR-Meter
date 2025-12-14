@@ -304,6 +304,7 @@ function promoteOverlayWindow(win, { focus = false } = {}) {
     // Enviar el estado inicial del candado al renderizador una vez que la ventana esté lista
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.webContents.send('lock-state-changed', isLocked);
+        checkForUpdates(); // Llamar a la función de comprobación de actualizaciones cuando la página esté cargada
     });
 
     // Manejar el evento para enfocar la ventana y ponerla siempre al frente
@@ -344,7 +345,6 @@ function promoteOverlayWindow(win, { focus = false } = {}) {
 
 app.whenReady().then(() => {
     createWindow();
-    checkForUpdates(); // Llamar a la función de comprobación de actualizaciones al inicio
 
     // Registrar atajo de teclado global para F10 (limpiar datos de DPS)
     globalShortcut.register('F10', () => {
@@ -373,7 +373,7 @@ async function checkForUpdates() {
 
     const repoOwner = 'mrsnakke'; // Reemplaza con el propietario de tu repositorio
     const repoName = 'BPSR-Meter'; // Reemplaza con el nombre de tu repositorio
-    const githubApiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`;
+    const githubApiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/tags`;
 
     https.get(githubApiUrl, {
         headers: {
@@ -389,24 +389,39 @@ async function checkForUpdates() {
         res.on('end', () => {
             if (res.statusCode === 200) {
                 try {
-                    const release = JSON.parse(data);
-                    const latestVersion = release.tag_name.replace(/^v/, ''); // Eliminar 'v' si existe
-                    const releaseUrl = release.html_url;
-                    logToFile(`Latest GitHub release version: ${latestVersion}`);
+                    const tags = JSON.parse(data);
+                    if (tags.length > 0) {
+                        // Find the latest tag by comparing versions
+                        let latestTag = tags[0];
+                        let latestVersion = latestTag.name.replace(/^v/, '');
+                        for (const tag of tags) {
+                            const version = tag.name.replace(/^v/, '');
+                            if (compareVersions(version, latestVersion) > 0) {
+                                latestVersion = version;
+                                latestTag = tag;
+                            }
+                        }
+                        const releaseUrl = `https://github.com/${repoOwner}/${repoName}/releases/tag/${latestTag.name}`;
+                        logToFile(`Latest GitHub tag version: ${latestVersion}`);
 
-                    if (compareVersions(latestVersion, currentVersion) > 0) {
-                        logToFile(`New version available: ${latestVersion}. Current: ${currentVersion}`);
-                        if (mainWindow) {
-                            mainWindow.webContents.send('update-available', { latestVersion, releaseUrl });
+                        if (compareVersions(latestVersion, currentVersion) > 0) {
+                            logToFile(`New version available: ${latestVersion}. Current: ${currentVersion}`);
+                            if (mainWindow) {
+                                console.log(`[electron-main] Sending 'update-available' event with latestVersion: ${latestVersion}, releaseUrl: ${releaseUrl}`);
+                                mainWindow.webContents.send('update-available', { latestVersion, releaseUrl });
+                            }
+                        } else {
+                            logToFile('No new update available.');
+                            console.log('[electron-main] No new update available.');
                         }
                     } else {
-                        logToFile('No new update available.');
+                        logToFile('No tags found in repository.');
                     }
                 } catch (e) {
                     logToFile('Error parsing GitHub API response: ' + e.message);
                 }
             } else {
-                logToFile(`Failed to fetch GitHub releases. Status: ${res.statusCode}`);
+                logToFile(`Failed to fetch GitHub tags. Status: ${res.statusCode}`);
             }
         });
     }).on('error', (e) => {
