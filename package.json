@@ -1,6 +1,6 @@
 {
   "name": "bpsr-meter",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "description": "BPSR Meter",
   "main": "electron-main.js",
   "bin": {
