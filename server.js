@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 // Cargar variables de entorno desde .env si existe (precedencia: .env < env vars del sistema)
+'use strict';
 const path_module = require('path');
 const fs_check = require('fs');
 const envPath = path_module.join(__dirname, '.env');
@@ -616,6 +617,7 @@ class UserDataManager {
             hp: new Map(),
             maxHp: new Map(),
         };
+         this.maxHpMonster = '';
 
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
@@ -971,6 +973,7 @@ class UserDataManager {
         const enemyIds = new Set([...this.enemyCache.name.keys(), ...this.enemyCache.hp.keys(), ...this.enemyCache.maxHp.keys()]);
         enemyIds.forEach((id) => {
             result[id] = {
+                id: (BigInt(id) >> 16n).toString(),
                 name: this.enemyCache.name.get(id),
                 hp: this.enemyCache.hp.get(id),
                 max_hp: this.enemyCache.maxHp.get(id),
@@ -981,6 +984,16 @@ class UserDataManager {
 
     /** Limpiar caché de enemigos */
     refreshEnemyCache() {
+        let maxHpMonsterId = '';
+        for (const [id, hp] of this.enemyCache.maxHp.entries()) {
+            if (!maxHpMonsterId || hp > this.enemyCache.maxHp.get(maxHpMonsterId)) {
+                maxHpMonsterId = id;
+            }
+        }
+        if (maxHpMonsterId && this.enemyCache.name.has(maxHpMonsterId)) {
+            this.maxHpMonster = this.enemyCache.name.get(maxHpMonsterId);
+        }
+
         this.enemyCache.name.clear();
         this.enemyCache.hp.clear();
         this.enemyCache.maxHp.clear();
@@ -1021,7 +1034,22 @@ class UserDataManager {
                 duration: endTime - timestamp,
                 userCount: users.size,
                 version: VERSION,
+                maxHpMonster: '',
             };
+
+            let maxHpMonsterId = 0;
+            for (const [id, hp] of this.enemyCache.maxHp.entries()) {
+                if (!maxHpMonsterId || hp > this.enemyCache.maxHp.get(maxHpMonsterId)) {
+                    maxHpMonsterId = id;
+                }
+            }
+            if (maxHpMonsterId && this.enemyCache.name.has(maxHpMonsterId)) {
+               summary.maxHpMonster = this.enemyCache.name.get(maxHpMonsterId);
+            }
+            if (!summary.maxHpMonster) {
+                summary.maxHpMonster = this.maxHpMonster;
+                this.maxHpMonster = '';
+            }
 
             const allUsersData = {};
             const userDatas = new Map();

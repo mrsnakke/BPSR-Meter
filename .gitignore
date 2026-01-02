@@ -5,6 +5,7 @@
 /logs
 /logs_dps.json
 dist/logs/
+temp_script.py
 
 # Build output
 /dist

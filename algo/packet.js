@@ -379,6 +379,14 @@ const getDamageSource = (damageSource) => {
 };
 
 // Las funciones isUuidPlayer y isUuidMonster ya no son necesarias, se usará UUIDHelper
+const isUuidPlayer = (uuid) => {
+    return (uuid.toBigInt() & 0xffffn) === 640n;
+};
+
+const isUuidMonster = (uuid) => {
+    const low = uuid.toBigInt() & 0xffffn;
+    return low === 64n || low === 32832n;
+};
 
 const doesStreamHaveIdentifier = (reader) => {
     let identifier = reader.readUInt32LE();
@@ -731,6 +739,7 @@ class PacketProcessor {
         const targetUuidInfo = UUIDHelper.parseUUID(targetUuid); // Usar UUIDHelper
         const isTargetPlayer = targetUuidInfo.isPlayer;
         const isTargetMonster = targetUuidInfo.isMonster;
+        targetUuid = targetUuid.shiftRight(16);
         // targetUuid = targetUuid.shiftRight(16); // Ya no es necesario reasignar, usar targetUuidInfo.playerId
 
         const attrCollection = aoiSyncDelta.Attrs;
