@@ -24,7 +24,7 @@
   "license": "AGPL-3.0",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
-    "@woheedev/bptimer-api-client": "^0.2.0",
+    "@woheedev/bptimer-api-client": "^0.2.2",
     "cap": "^0.2.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

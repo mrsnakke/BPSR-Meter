@@ -829,6 +829,96 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             transform: translateX(-50%);
             pointer-events: none; /* Asegurar que el tooltip no interfiera con eventos del mouse */
         }
+
+        /* Estilos para el Footer de Paginación */
+        .pagination-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 32px; /* Altura máxima reducida */
+            padding: 0 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-top: 6px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            user-select: none;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 100%;
+        }
+
+        .pagination-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 4px;
+            width: 24px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.7rem;
+        }
+
+        .pagination-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .players-selector {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 100%;
+        }
+
+        .players-input-wrapper {
+            display: flex;
+            align-items: center; /* Cambio a horizontal para ahorrar altura */
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 0 4px;
+            height: 22px;
+            gap: 4px;
+        }
+
+        .players-count-value {
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: #fff;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .players-arrow-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 2px;
+            font-size: 0.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .players-arrow-btn:hover {
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -888,6 +978,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
             <div id="logs-section" style="margin-top:8px;"></div>
         </div>
         <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1);"><div id="message-display">...</div></main>
+        
+        <!-- Footer de Paginación y Selector de Jugadores -->
+        <footer class="pagination-footer" id="pagination-footer">
+            <div class="pagination-controls">
+                <button class="pagination-btn" id="prev-page-btn" title="Página Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="page-info">Pag 1/1</span>
+                <button class="pagination-btn" id="next-page-btn" title="Página Siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="players-selector">
+                <span>⚙️Players</span>
+                <div class="players-input-wrapper">
+                    <button class="players-arrow-btn" id="increase-players-btn"><i class="fa-solid fa-chevron-up"></i></button>
+                    <span class="players-count-value" id="players-per-page-display">5</span>
+                    <button class="players-arrow-btn" id="decrease-players-btn"><i class="fa-solid fa-chevron-down"></i></button>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <!-- Notificación de actualización -->
@@ -977,6 +1084,10 @@ const professionMap = {
     let syncTimerDisplayTimeout; // Para el retardo de 200ms
     let isLocked = false; // Estado de bloqueo de la ventana
     let logPreviewTimeout; // Declarar logPreviewTimeout aquí
+    let currentPage = 1; // Página actual de jugadores
+    let playersPerPage = 5; // Cantidad de jugadores a mostrar por página (5, 10, 15, 20)
+    const maxPlayersPerPage = 20;
+    const minPlayersPerPage = 5;
     let lastNumPlayers = 0; // Para controlar el redimensionamiento por número de jugadores
     let autoClearOnServerChange = true; // Estado para la configuración (true = limpieza automática activa)
 
@@ -1278,20 +1389,22 @@ const professionMap = {
         const barGap = 8;    // Espacio entre barras
 
         const numPlayers = container.querySelectorAll('.player-bar').length;
-        // Asegurar que la altura mínima sea para 10 barras, o el número actual de jugadores si es mayor
-        const numPlayersForHeightCalculation = Math.max(numPlayers, 10); 
+        // Asegurar que la altura mínima sea para playersPerPage, o el número actual de jugadores si es mayor
+        const numPlayersForHeightCalculation = Math.max(numPlayers, playersPerPage); 
 
         let barsHeight = 0;
-        // Calcular la altura para el número de jugadores para el cálculo, o 10 si no hay jugadores
+        // Calcular la altura para el número de jugadores para el cálculo, o playersPerPage si no hay jugadores
         barsHeight = (numPlayersForHeightCalculation * barHeight) + ((numPlayersForHeightCalculation - 1) * barGap);
         
         // Si no hay jugadores, asegurar una altura mínima para el mensaje "Esperando datos..."
         if (numPlayers === 0) {
-            barsHeight = (10 * barHeight) + (9 * barGap); // Altura para 10 barras
+            barsHeight = (playersPerPage * barHeight) + ((playersPerPage - 1) * barGap); // Altura para playersPerPage barras
         }
 
-        // Calcular la altura total sin escalar, incluyendo la cabecera y un búfer
-        const totalContentHeightUnscaled = headerHeight + marginTop + borderWidth + barsHeight + 20; // Búfer de 20px
+        // Calcular la altura total sin escalar, incluyendo la cabecera, el footer y un búfer
+        const footerHeight = document.getElementById('pagination-footer')?.offsetHeight || 40; // Altura del footer (aproximada si no está renderizado)
+        const totalContentHeightUnscaled = headerHeight + marginTop + borderWidth + barsHeight + footerHeight + 20; // Búfer de 20px
+
         // If Skill Analysis view is visible, compute a larger target size
         const skillContainer = document.getElementById('skill-analysis-container');
         let finalWidth = Math.round(baseWidth * currentZoom);
@@ -1573,7 +1686,25 @@ const professionMap = {
                 userArray.sort((a, b) => (b.total_damage && b.total_damage.total ? Number(b.total_damage.total) : 0) - (a.total_damage && a.total_damage.total ? Number(a.total_damage.total) : 0));
             }
             
-            userArray = userArray.slice(0, 20);
+            // Calcular total de páginas
+            const totalPlayers = userArray.length;
+            const totalPages = Math.max(1, Math.ceil(totalPlayers / playersPerPage));
+            
+            // Asegurar que la página actual sea válida
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            // Actualizar info de paginación en el footer
+            const pageInfo = document.getElementById('page-info');
+            const prevBtn = document.getElementById('prev-page-btn');
+            const nextBtn = document.getElementById('next-page-btn');
+            if (pageInfo) pageInfo.textContent = `Pag ${currentPage}/${totalPages}`;
+            if (prevBtn) prevBtn.disabled = (currentPage === 1);
+            if (nextBtn) nextBtn.disabled = (currentPage === totalPages);
+
+            // Segmentar array de usuarios para la página actual
+            const startIndex = (currentPage - 1) * playersPerPage;
+            userArray = userArray.slice(startIndex, startIndex + playersPerPage);
 
             const currentNumPlayers = userArray.length;
             if (currentNumPlayers !== lastNumPlayers) {
@@ -1840,6 +1971,43 @@ const professionMap = {
         });
     }
 
+    // Listeners para los botones del Footer (Paginación y Selector de Jugadores)
+    document.getElementById('prev-page-btn')?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchDataAndRender();
+            updateWindowSize();
+        }
+    });
+
+    document.getElementById('next-page-btn')?.addEventListener('click', () => {
+        // El total de páginas se calcula dinámicamente en fetchDataAndRender, 
+        // pero podemos navegar si los datos lo permiten
+        currentPage++;
+        fetchDataAndRender();
+        updateWindowSize();
+    });
+
+    document.getElementById('increase-players-btn')?.addEventListener('click', () => {
+        if (playersPerPage < maxPlayersPerPage) {
+            playersPerPage += 5;
+            document.getElementById('players-per-page-display').textContent = playersPerPage;
+            currentPage = 1; // Resetear a página 1 al cambiar límite
+            fetchDataAndRender();
+            updateWindowSize();
+        }
+    });
+
+    document.getElementById('decrease-players-btn')?.addEventListener('click', () => {
+        if (playersPerPage > minPlayersPerPage) {
+            playersPerPage -= 5;
+            document.getElementById('players-per-page-display').textContent = playersPerPage;
+            currentPage = 1; // Resetear a página 1 al cambiar límite
+            fetchDataAndRender();
+            updateWindowSize();
+        }
+    });
+
     // Skill button: load module if necessary and open Skill Analysis view
     (function attachSkillButton(){
         const skillBtn = document.getElementById('skill-button');
@@ -1902,7 +2070,10 @@ const professionMap = {
 
             // Hide main bars and show skill container
             const bars = document.getElementById('player-bars-container');
+            const footer = document.getElementById('pagination-footer'); // Obtener el footer
+
             if (bars) bars.style.display = 'none';
+            if (footer) footer.style.display = 'none'; // Ocultar el footer cuando se abre Skill Analysis
             skillContainer.style.display = '';
 
             // If module not yet loaded, load the canonical ASCII-named module only
@@ -1933,6 +2104,20 @@ const professionMap = {
             }
         });
     })();
+
+    // Función para ocultar la vista de Skill Analysis y mostrar las barras y el footer
+    window.hideSkillAnalysis = function() {
+        const skillContainer = document.getElementById('skill-analysis-container');
+        const bars = document.getElementById('player-bars-container');
+        const footer = document.getElementById('pagination-footer');
+
+        if (skillContainer) skillContainer.style.display = 'none';
+        if (bars) bars.style.display = 'flex'; // Mostrar las barras principales
+        if (footer) footer.style.display = 'flex'; // Mostrar el footer
+
+        // Ajustar el tamaño de la ventana después de ocultar Skill Analysis
+        if (typeof updateWindowSize === 'function') updateWindowSize();
+    };
     </script>
 </body>
 </html>
