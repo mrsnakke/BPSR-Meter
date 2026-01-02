@@ -1186,6 +1186,7 @@ const professionMap = {
                     // ensure main bars are visible
                     const bars = document.getElementById('player-bars-container'); if (bars) bars.style.display = 'block';
                 }
+                toggleFooterVisibility(); // Asegurar visibilidad del footer
             });
         }
         if (liteDpsHealerBtn) {
@@ -2117,6 +2118,19 @@ const professionMap = {
 
         // Ajustar el tamaño de la ventana después de ocultar Skill Analysis
         if (typeof updateWindowSize === 'function') updateWindowSize();
+    };
+
+    // Asegurarse de que el footer sea visible al cambiar entre modos si no se está en Skill Analysis
+    const toggleFooterVisibility = () => {
+        const skillContainer = document.getElementById('skill-analysis-container');
+        const footer = document.getElementById('pagination-footer');
+        if (footer) {
+            if (!skillContainer || skillContainer.style.display === 'none') {
+                footer.style.display = 'flex';
+            } else {
+                footer.style.display = 'none';
+            }
+        }
     };
     </script>
 </body>
