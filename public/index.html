@@ -1087,7 +1087,7 @@ const professionMap = {
     let currentPage = 1; // Página actual de jugadores
     let playersPerPage = 5; // Cantidad de jugadores a mostrar por página (5, 10, 15, 20)
     const maxPlayersPerPage = 20;
-    const minPlayersPerPage = 5;
+    const minPlayersPerPage = 1;
     let lastNumPlayers = 0; // Para controlar el redimensionamiento por número de jugadores
     let autoClearOnServerChange = true; // Estado para la configuración (true = limpieza automática activa)
 
@@ -1704,8 +1704,19 @@ const professionMap = {
             if (nextBtn) nextBtn.disabled = (currentPage === totalPages);
 
             // Segmentar array de usuarios para la página actual
-            const startIndex = (currentPage - 1) * playersPerPage;
-            userArray = userArray.slice(startIndex, startIndex + playersPerPage);
+            if (playersPerPage === 1) {
+                // Filtro especial de 1: solo el jugador local
+                if (localPlayerUid !== null) {
+                    const localPlayer = userArray.find(u => u.id === localPlayerUid);
+                    userArray = localPlayer ? [localPlayer] : [];
+                } else {
+                    // Si no se ha detectado el localPlayerUid aún, mostrar el primero o nada
+                    userArray = userArray.slice(0, 1);
+                }
+            } else {
+                const startIndex = (currentPage - 1) * playersPerPage;
+                userArray = userArray.slice(startIndex, startIndex + playersPerPage);
+            }
 
             const currentNumPlayers = userArray.length;
             if (currentNumPlayers !== lastNumPlayers) {
@@ -1990,23 +2001,31 @@ const professionMap = {
     });
 
     document.getElementById('increase-players-btn')?.addEventListener('click', () => {
-        if (playersPerPage < maxPlayersPerPage) {
+        if (playersPerPage === 1) {
+            playersPerPage = 3;
+        } else if (playersPerPage === 3) {
+            playersPerPage = 5;
+        } else if (playersPerPage < maxPlayersPerPage) {
             playersPerPage += 5;
-            document.getElementById('players-per-page-display').textContent = playersPerPage;
-            currentPage = 1; // Resetear a página 1 al cambiar límite
-            fetchDataAndRender();
-            updateWindowSize();
         }
+        document.getElementById('players-per-page-display').textContent = (playersPerPage === 1) ? '1 (Me)' : playersPerPage;
+        currentPage = 1; // Resetear a página 1 al cambiar límite
+        fetchDataAndRender();
+        updateWindowSize();
     });
 
     document.getElementById('decrease-players-btn')?.addEventListener('click', () => {
-        if (playersPerPage > minPlayersPerPage) {
+        if (playersPerPage > 5) {
             playersPerPage -= 5;
-            document.getElementById('players-per-page-display').textContent = playersPerPage;
-            currentPage = 1; // Resetear a página 1 al cambiar límite
-            fetchDataAndRender();
-            updateWindowSize();
+        } else if (playersPerPage === 5) {
+            playersPerPage = 3;
+        } else if (playersPerPage === 3) {
+            playersPerPage = 1;
         }
+        document.getElementById('players-per-page-display').textContent = (playersPerPage === 1) ? '1 (Me)' : playersPerPage;
+        currentPage = 1; // Resetear a página 1 al cambiar límite
+        fetchDataAndRender();
+        updateWindowSize();
     });
 
     // Skill button: load module if necessary and open Skill Analysis view
