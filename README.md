@@ -9,19 +9,23 @@
 > **[ESPAÑOL]**  
 > He decidido **abandonar el desarrollo de este proyecto en la Season 2** (antes de la llegada del *Axe Man*). El código queda completamente abierto y a disposición de la comunidad: si lo deseas, **puedes forkear este repositorio y continuar mejorando el medidor por tu cuenta**. Muchas gracias a todos por el apoyo durante este tiempo.
 > 
+> 📢 **Nota importante:** El proyecto complementario **[BPSR-AutoModules](https://github.com/mrsnakke/BPSR-AutoModules) sí se encuentra completamente actualizado al día y en constante desarrollo**. Te recomiendo seguir utilizándolo para tus cálculos de módulos.
+> 
 > **[ENGLISH]**  
 > I have decided to **abandon the development of this project during Season 2** (prior to the *Axe Man* update). The code remains open-source: feel free to **fork this repository and keep improving the meter on your own**. Thank you all for your support.
+> 
+> 📢 **Important Note:** The companion project **[BPSR-AutoModules](https://github.com/mrsnakke/BPSR-AutoModules) remains fully up-to-date and under active development**. I highly recommend continuing to use it for your module configurations.
 
 ---
 
 # BPSR Meter - Medidor de DPS para Blue Protocol
 
 > ### 🚀 Recomendación: BPSR Fully Automatic Module Filtering Tool
-> Para facilitar el cálculo de configuraciones de módulos, te recomiendo mi otro proyecto:
+> Para facilitar el cálculo de configuraciones de módulos, te recomiendo mi otro proyecto (actualizado y en constante desarrollo):
 > [**BPSR-AutoModules**](https://github.com/mrsnakke/BPSR-AutoModules)
 > (No requiere capturas de pantalla ni entrada manual)
 
-[![English](https://img.shields.io/badge/English-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NDAgNjMwIj48cGF0aCBmaWxsPSIjYjIyMjM0IiBkPSJNMCAwaDk4MHY2ODNIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCA3Nmg5ODB2NTJIMHptMCAxNTJoOTgwdi01Mkgwem0wIDE1Mmg5ODB2LTUySDB6bTAgMTUyaDk4MHYtNTJIMHptMCAxNTJoOTgwdi01MkgweiIvPjxwYXRoIGZpbGw9IiMwMDMyOTYiIGQ9Ik0wIDBoNDIwVjM2OEgwem0zMCAyNGwzMyAxMDIgMTAtMzEtMzItODcgNzIgMzcgOTctMzcgMTIgMzItNzIgODYgMTIgMzEgOTYtMzcgNzIgMzYtMzItODcgMTAtMzIgMzMgMTAyLTEwMy02Mi0xMDMgNjIgMzMgMTAyIDEwLTMxLTMyLTg3IDcyIDM3IDk7LTM3IDEyIDMyLTcyIDg2IDEyIDMxIDk2LTM3IDcyIDM2LTMyLTg3IDEwLTMyIDMzIDEwMi0xMDMtNjItMTAzIDYyem0wIDEyMGwzMyAxMDIgMTAtMzEtMzItODcgNzIgMzcgOTctMzcgMTIgMzItNzIgODYgMTIgMzEgOTYtMzcgNzIgMzYtMzItODcgMTAtMzIgMzMgMTAyLTEwMy02Mi0xMTAgNjIgMzMgMTAyIDEwLTMxLTMyLTg3IDcyIDM3IDk3LTM3IDEyIDMyLTcyIDg2IDEyIDMxIDk2LTM3IDcyIDM2LTMyLTg3IDEwLTMyIDMzIDEwMi0xMDMtNjItMTAzIDYyem0xNjggMTIwbDMzIDEwMiAxMC0zMS0zMi04NyA3MiAzNyA5Ny0zNyAxMiAzMi03MiA4NiAxMiAzMSA5Ni0zNyA3MiAzNi0zMi04NyAxMC0zMiAzMyAxMDItMTAzLTYyLTEwMyA2MnoiLz48L3N2Zz4=)](#bpsr-meter-english-version)
+[![English](https://img.shields.io/badge/English-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4NDAgNjMwIj48cGF0aCBmaWxsPSIjYjIyMjM0IiBkPSJNMCAwaDk4MHY2ODNIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCA3Nmg5ODB2NTJIMHptMCAxNTJoOTgwdi01Mkgwem0wIDE1Mmg5ODB2LTUySDB6bTAgMTUyaDk4MHYtNTJIMHptMCAxNTJoOTgwdi01MkgweiIvPjxwYXRoIGZpbGw9IiMwMDMyOTYiIGQ9Ik0wIDBoNDIwVjM2OEgwem0zMCAyNGwzMyAxMDIgMTAtMzEtMzItODcgNzIgMzcgOTctMzcgMTIgMzItNzIgODYgMTIgMzEgOTYtMzcgNzIgMzYtMzItODcgMTAtMzIgMzMgMTAyLTEwMy02Mi0xMDMgNjIgMzMgMTAyIDEwLTMxLTMyLTg3IDcyIDM3IDk7LTM3IDEyIDMyLTcyIDg2IDEyIDMxIDk2LTM3IDcyIDM2LTMyLTg3IDEwLTMyIDMzIDEwMi0xMDMtNjItMTAzIDYyem0wIDEyMGwzMyAxMDIgMTAtMzEtMzItODcgNzIgMzcgOTctMzcgMTIgMzItNzIgODYgMTIgMzEgOTYtMzcgNzIgMzYtMzItODcgMTAtMzIgMzMgMTAyLTE0My02Mi0xMTAgNjIgMzMgMTAyIDEwLTMxLTMyLTg3IDcyIDM3IDk3LTM3IDEyIDMyLTcyIDg2IDEyIDMxIDk2LTM3IDcyIDM2LTMyLTg3IDEwLTMyIDMzIDEwMi0xMDMtNjItMTAzIDYyem0xNjggMTIwbDMzIDEwMiAxMC0zMS0zMi04NyA3MiAzNyA5Ny0zNyAxMiAzMi03MiA4NiAxMiAzMSA5Ni0zNyA3MiAzNi0zMi04NyAxMC0zMiAzMyAxMDItMTAzLTYyLTEwMyA2MnoiLz48L3N2Zz4=)](#bpsr-meter-english-version)
 
 ---
 
@@ -49,7 +53,7 @@ BPSR Meter es una aplicación de escritorio que funciona como un medidor de DPS 
 
 ---
 > ### Uso Responsable
-> Esta herramienta está diseñada para ayudarte a mejorar tu propio rendimiento. **Por favor, no la utilices para degradar, acosar o discriminar a otros jugadores.** El objetivo es la superación personal y el disfrute del juego en comunidad.
+> Esta herramienta está diseñada para ayudarte a mejorar tu propio rendimiento. **Por favor, no la utilices para degradar, acasar o discriminar a otros jugadores.** El objetivo es la superación personal y el disfrute del juego en comunidad.
 
 ## Instalación
 
@@ -133,7 +137,7 @@ Si la ventana del medidor no es transparente o tiene un fondo negro, puedes solu
 > Sí, puedes ocultarlo haciendo clic en el icono de la barra de tareas.
 
 **¿Se pueden ocultar más datos?**
-> Sí, ahora existen los botones "Advanced" and "Lite", que te permiten cambiar entre la versión extendida y la simplificada.
+> Sí, ahora existen los botones "Advanced" y "Lite", que te permiten cambiar entre la versión extendida y la simplificada.
 
 
 **¿Funciona con otros juegos?**
@@ -168,7 +172,7 @@ Agradecimientos especiales a [woheedev](https://github.com/woheedev/) por su lib
 # BPSR Meter (English Version)
 
 > ### 🚀 Recommendation: BPSR Fully Automatic Module Filtering Tool
-> To facilitate module configuration calculations, I recommend my other project:
+> To facilitate module configuration calculations, I recommend my other project (active and updated):
 > [**BPSR-AutoModules**](https://github.com/mrsnakke/BPSR-AutoModules)
 > (No screenshots or manual input required)
 
