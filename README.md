@@ -1,7 +1,17 @@
-
 <img width="1434" height="435" alt="image" src="https://github.com/user-attachments/assets/3e485411-6b1e-4bfc-be20-7fbdd941ce1c" />
 
 </div>
+---
+
+> [!WARNING]
+> # ⚠️ PROYECTO DESCONTINUADO / PROJECT DISCONTINUED
+> 
+> **[ESPAÑOL]**  
+> He decidido **abandonar el desarrollo de este proyecto en la Season 2** (antes de la llegada del *Axe Man*). El código queda completamente abierto y a disposición de la comunidad: si lo deseas, **puedes forkear este repositorio y continuar mejorando el medidor por tu cuenta**. Muchas gracias a todos por el apoyo durante este tiempo.
+> 
+> **[ENGLISH]**  
+> I have decided to **abandon the development of this project during Season 2** (prior to the *Axe Man* update). The code remains open-source: feel free to **fork this repository and keep improving the meter on your own**. Thank you all for your support.
+
 ---
 
 # BPSR Meter - Medidor de DPS para Blue Protocol
@@ -55,7 +65,7 @@ BPSR Meter es una aplicación de escritorio que funciona como un medidor de DPS 
 ### Video Tutorial
 Para una guía visual sobre cómo instalar y configurar el medidor, puedes ver el siguiente video:
 
-[![Video Tutorial de YouTube](https://github.com/mrsnakke/BPSR-Meter/blob/master/PORTADA2.jpg?raw=true)](https://youtu.be/QvGLjNvhKsw)  
+[![Video Tutorial de YouTube](https://github.com/mrsnakke/BPSR-Meter/blob/master/PORTADA2.jpg?raw=true)](  
 
 ---
 
@@ -123,7 +133,7 @@ Si la ventana del medidor no es transparente o tiene un fondo negro, puedes solu
 > Sí, puedes ocultarlo haciendo clic en el icono de la barra de tareas.
 
 **¿Se pueden ocultar más datos?**
-> Sí, ahora existen los botones "Advanced" y "Lite", que te permiten cambiar entre la versión extendida y la simplificada.
+> Sí, ahora existen los botones "Advanced" and "Lite", que te permiten cambiar entre la versión extendida y la simplificada.
 
 
 **¿Funciona con otros juegos?**
@@ -199,7 +209,7 @@ BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Sec
 ### Video Tutorial
 For a visual guide on how to install and set up the meter, you can watch the following video:
 
-[![Video Tutorial de YouTube](https://github.com/mrsnakke/BPSR-Meter/blob/master/PORTADA2.jpg?raw=true)](https://youtu.be/QvGLjNvhKsw) 
+[![Video Tutorial de YouTube](https://github.com/mrsnakke/BPSR-Meter/blob/master/PORTADA2.jpg?raw=true)]( 
 
 ---
 
